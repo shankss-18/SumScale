@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
+import AlertSettings from '../components/AlertSettings';
 import { useAuth } from '../context/AuthContext';
 
 const ProfilePage = () => {
@@ -117,6 +118,11 @@ const ProfilePage = () => {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Feature 3 — Emergency Alert Settings */}
+        <div style={{ marginTop: 24 }}>
+          <AlertSettings />
         </div>
       </main>
 

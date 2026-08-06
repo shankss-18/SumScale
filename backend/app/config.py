@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = Field(default="", description="Groq API key (optional — uses Gemini if not set)")
 
     # -----------------------------------------------------------------------
+    # Fraud Verification APIs (all optional — app boots without them)
+    # -----------------------------------------------------------------------
+    GOOGLE_SAFE_BROWSING_KEY: str = Field(default="", description="Google Safe Browsing API v4 key (optional)")
+    VIRUSTOTAL_API_KEY: str = Field(default="", description="VirusTotal API v3 key (optional)")
+    WHOISXML_API_KEY: str = Field(default="", description="WhoisXML API key for domain age (optional)")
+    IPQUALITYSCORE_API_KEY: str = Field(default="", description="IPQualityScore API key for phone checks (optional)")
+
+    # -----------------------------------------------------------------------
+    # Twilio SMS Alerts (optional — alerts disabled if not set)
+    # -----------------------------------------------------------------------
+    TWILIO_ACCOUNT_SID: str = Field(default="", description="Twilio Account SID (optional)")
+    TWILIO_AUTH_TOKEN: str = Field(default="", description="Twilio Auth Token (optional)")
+    TWILIO_FROM_NUMBER: str = Field(default="", description="Twilio sender phone number, e.g. +12345678900 (optional)")
+
+    # -----------------------------------------------------------------------
     # Speech-to-Text (Google Cloud Speech or equivalent)
     # -----------------------------------------------------------------------
     SPEECH_TO_TEXT_API_KEY: str = Field(..., description="Speech-to-text API key (required)")

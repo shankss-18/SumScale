@@ -21,6 +21,9 @@ class UserInDB(BaseModel):
     phone_number: Optional[str] = Field(default=None, description="Optional phone number")
     hashed_password: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Feature 3 — Proactive Alerts
+    emergency_contact_phone: Optional[str] = Field(default=None, description="Emergency contact phone for health alerts")
+    alert_consent: bool = Field(default=False, description="User has consented to emergency alerts")
 
 
 class UserResponse(BaseModel):
@@ -32,4 +35,6 @@ class UserResponse(BaseModel):
     email: EmailStr
     phone_number: Optional[str] = None
     created_at: datetime
+    emergency_contact_phone: Optional[str] = None
+    alert_consent: bool = False
 

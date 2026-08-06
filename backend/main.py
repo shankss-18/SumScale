@@ -34,6 +34,9 @@ from app.routers.auth import router as auth_router
 from app.routers.case import router as case_router
 from app.routers.reminder import router as reminder_router
 from app.routers.chat import router as chat_router
+from app.routers.fraud import router as fraud_router
+from app.routers.fraud_cases import router as fraud_cases_router
+from app.routers.intel import router as intel_router
 from app.services.scheduler_service import start_scheduler, shutdown_scheduler
 
 # ---------------------------------------------------------------------------
@@ -180,3 +183,6 @@ app.include_router(auth_router)
 app.include_router(case_router)
 app.include_router(reminder_router)
 app.include_router(chat_router)
+app.include_router(fraud_router)
+app.include_router(fraud_cases_router)
+app.include_router(intel_router)

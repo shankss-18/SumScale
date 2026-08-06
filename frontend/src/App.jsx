@@ -11,6 +11,7 @@ import NewCase from './pages/NewCase';
 import ClarifyingChat from './pages/ClarifyingChat';
 import CaseReport from './pages/CaseReport';
 import ProfilePage from './pages/ProfilePage';
+import FraudVerifyPage from './pages/FraudVerifyPage';
 import FloatingChatbot from './components/FloatingChatbot';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/new-case" element={<NewCase />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/fraud-verify" element={<FraudVerifyPage />} />
               <Route path="/case/:id/clarify" element={<ClarifyingChat />} />
               <Route path="/case/:id" element={<CaseReport />} />
             </Route>
