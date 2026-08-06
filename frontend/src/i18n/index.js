@@ -17,6 +17,9 @@ const resources = {
       home: {
         badge: 'MULTIMODAL CAPABILITIES',
         heroTitle: 'Reach your data in any format',
+        aboutBadge: 'About SumScale AI',
+        aboutTitle: 'Solving Real-World Challenges with Multimodal Intelligence',
+        aboutDesc: "SumScale AI was engineered to solve one of modern society's biggest bottlenecks: converting complex, unstructured real-world data—medical lab reports, handwritten records, and regional voice notes—into instant, reliable decision support.",
         card1Title: 'Speech & Voice Notes',
         card1Desc: 'Record voice notes live from your browser or upload audio files for instant transcription and AI analysis.',
         card1b1: 'HTML5 Live Microphone Capture',
@@ -257,6 +260,9 @@ const resources = {
       home: {
         badge: 'మల్టీమోడల్ సామర్థ్యాలు',
         heroTitle: 'ఏ ఆకృతిలోనైనా మీ డేటాను పొందండి',
+        aboutBadge: 'సమ్‌స్కేల్ AI గురించి',
+        aboutTitle: 'మల్టీమోడల్ ఇంటెలిజెన్స్‌తో నిజమైన సవాళ్లకు పరిష్కారాలు',
+        aboutDesc: 'వైద్య ల్యాబ్ నివేదికలు, చేతితో రాసిన రికార్డులు మరియు ప్రాంతీయ వాయిస్ నోట్‌ల వంటి సంక్లిష్టమైన డేటాను తక్షణ, విశ్వసనీయ నిర్ణయ సహాయంగా మార్చడానికి సమ్‌స్కేల్ AI రూపొందించబడింది.',
         card1Title: 'మాట్లాడే శబ్దాలు & వాయిస్ నోట్స్',
         card1Desc: 'మీ బ్రౌజర్ నుండి వాయిస్ నోట్‌లను రికార్డ్ చేయండి లేదా తక్షణ లిప్యంతరీకరణ మరియు AI విశ్లేషణ కోసం ఆడియో ఫైళ్లను అప్‌లోడ్ చేయండి.',
         card1b1: 'HTML5 లైవ్ మైక్రోఫోన్ రికార్డింగ్',

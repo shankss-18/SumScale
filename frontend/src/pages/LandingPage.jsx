@@ -75,13 +75,15 @@ const LandingPage = () => {
         <div className="space-y-4 text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#EDF6F9] border border-[#83C5BE]/40">
             <BrandIcon className="w-5 h-3.5 text-[#006D77]" />
-            <span className="text-xs font-extrabold uppercase tracking-widest text-[#006D77]">About SumScale AI</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-[#006D77]">
+              {t('home.aboutBadge', 'About SumScale AI')}
+            </span>
           </div>
           <h2 className="text-4xl sm:text-5xl font-normal font-serif text-[#006D77] tracking-tight leading-tight">
-            Solving Real-World Challenges with Multimodal Intelligence
+            {t('home.aboutTitle', 'Solving Real-World Challenges with Multimodal Intelligence')}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-            SumScale AI was engineered to solve one of modern society's biggest bottlenecks: converting complex, unstructured real-world data—medical lab reports, handwritten records, and regional voice notes—into instant, reliable decision support.
+            {t('home.aboutDesc', "SumScale AI was engineered to solve one of modern society's biggest bottlenecks: converting complex, unstructured real-world data—medical lab reports, handwritten records, and regional voice notes—into instant, reliable decision support.")}
           </p>
         </div>
 
@@ -116,33 +118,32 @@ const LandingPage = () => {
               {/* Title & Underline */}
               <div className="space-y-2">
                 <h3 className="text-2xl font-extrabold text-slate-900 leading-tight group-hover:text-[#006D77] transition-colors">
-                  Speech & Voice Notes
+                  {t('home.card1Title')}
                 </h3>
                 <div className="w-12 h-0.5 bg-[#83C5BE]" />
               </div>
 
               {/* Description */}
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
-                Record voice notes live from your browser or upload audio files for instant transcription and AI analysis.
+                {t('home.card1Desc')}
               </p>
 
               {/* Bullets */}
               <ul className="space-y-2 pt-2 text-xs font-semibold text-slate-700">
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>HTML5 Live Microphone Capture</span>
+                  <span>{t('home.card1b1')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>Multilingual Speech-to-Text</span>
+                  <span>{t('home.card1b2')}</span>
                 </li>
               </ul>
             </div>
 
             {/* CTA Arrow Link */}
             <div className="relative z-10 pt-2 text-xs font-extrabold text-[#006D77] flex items-center space-x-1 group-hover:translate-x-1 transition-transform">
-              <span>Start Recording</span>
-              <span>→</span>
+              <span>{t('home.card1Cta')}</span>
             </div>
           </Link>
 
@@ -174,33 +175,32 @@ const LandingPage = () => {
               {/* Title & Underline */}
               <div className="space-y-2">
                 <h3 className="text-2xl font-extrabold text-white leading-tight">
-                  Document Digitisation
+                  {t('home.card2Title')}
                 </h3>
                 <div className="w-12 h-0.5 bg-white/40" />
               </div>
 
               {/* Description */}
               <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                Extract text, key metrics, and facts from scanned report PDFs, images, lab results, and financial CSV datasets.
+                {t('home.card2Desc')}
               </p>
 
               {/* Bullets */}
               <ul className="space-y-2 pt-2 text-xs font-semibold text-white">
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>PDF, Image & CSV Processing</span>
+                  <span>{t('home.card2b1')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>Structured Fact Extraction</span>
+                  <span>{t('home.card2b2')}</span>
                 </li>
               </ul>
             </div>
 
             {/* CTA Arrow Link */}
             <div className="relative z-10 pt-2 text-xs font-extrabold text-white flex items-center space-x-1 group-hover:translate-x-1 transition-transform">
-              <span>Scan Document</span>
-              <span>→</span>
+              <span>{t('home.card2Cta')}</span>
             </div>
           </Link>
 
@@ -232,33 +232,32 @@ const LandingPage = () => {
               {/* Title & Underline */}
               <div className="space-y-2">
                 <h3 className="text-2xl font-extrabold text-slate-900 leading-tight group-hover:text-[#006D77] transition-colors">
-                  Fraud & Security Shield
+                  {t('home.card3Title')}
                 </h3>
                 <div className="w-12 h-0.5 bg-[#83C5BE]" />
               </div>
 
               {/* Description */}
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
-                Detect phishing anomalies, fake invoice screenshots, and urgent impersonation language in messages.
+                {t('home.card3Desc')}
               </p>
 
               {/* Bullets */}
               <ul className="space-y-2 pt-2 text-xs font-semibold text-slate-700">
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>Phishing & Scam Pattern Spotting</span>
+                  <span>{t('home.card3b1')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-[#83C5BE]" />
-                  <span>Remediation & Escalation Steps</span>
+                  <span>{t('home.card3b2')}</span>
                 </li>
               </ul>
             </div>
 
             {/* CTA Arrow Link */}
             <div className="relative z-10 pt-2 text-xs font-extrabold text-[#006D77] flex items-center space-x-1 group-hover:translate-x-1 transition-transform">
-              <span>Verify Security Risk</span>
-              <span>→</span>
+              <span>{t('home.card3Cta')}</span>
             </div>
           </Link>
 
