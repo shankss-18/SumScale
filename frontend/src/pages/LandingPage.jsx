@@ -267,19 +267,19 @@ const LandingPage = () => {
         <div className="rounded-3xl bg-gradient-to-r from-[#003840] via-[#006D77] to-[#005A63] text-white p-8 sm:p-10 shadow-lg grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="space-y-1">
             <p className="text-3xl sm:text-4xl font-extrabold text-[#83C5BE]">90%</p>
-            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Faster Case Analysis</p>
+            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">{t('home.stat1', 'Faster Case Analysis')}</p>
           </div>
           <div className="space-y-1">
             <p className="text-3xl sm:text-4xl font-extrabold text-[#83C5BE]">5+</p>
-            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Indian Vernaculars</p>
+            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">{t('home.stat2', 'Indian Vernaculars')}</p>
           </div>
           <div className="space-y-1">
             <p className="text-3xl sm:text-4xl font-extrabold text-[#83C5BE]">100%</p>
-            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">OTP Verified Access</p>
+            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">{t('home.stat3', 'OTP Verified Access')}</p>
           </div>
           <div className="space-y-1">
             <p className="text-3xl sm:text-4xl font-extrabold text-[#83C5BE]">&lt; 3s</p>
-            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Real-Time AI Response</p>
+            <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">{t('home.stat4', 'Real-Time AI Response')}</p>
           </div>
         </div>
       </section>

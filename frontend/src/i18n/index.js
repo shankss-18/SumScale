@@ -38,6 +38,11 @@ const resources = {
         card3b2: 'Remediation & Escalation Steps',
         card3Cta: 'Verify Security Risk →',
 
+        stat1: 'Faster Case Analysis',
+        stat2: 'Indian Vernaculars',
+        stat3: 'OTP Verified Access',
+        stat4: 'Real-Time AI Response',
+
         footer: 'sumscale platform © 2026 — Multimodal AI for decision support.',
       },
       dashboard: {
@@ -157,6 +162,11 @@ const resources = {
         card3b1: 'फिशिंग और घोटाले की पहचान',
         card3b2: 'उपचार और वृद्धि के चरण',
         card3Cta: 'सुरक्षा जोखिम की जांच करें →',
+
+        stat1: 'तेज़ मामला विश्लेषण',
+        stat2: 'भारतीय क्षेत्रीय भाषाएं',
+        stat3: 'OTP सत्यापित पहुंच',
+        stat4: 'रियल-टाइम AI उत्तर',
 
         footer: 'sumscale प्लेटफ़ॉर्म © 2026 — निर्णय सहायता के लिए मल्टीमॉडल AI।',
       },
@@ -280,6 +290,11 @@ const resources = {
         card3b1: 'ఫిషింగ్ & మోసాల గుర్తింపు',
         card3b2: 'పరిష్కారం & చర్యలు',
         card3Cta: 'భద్రతా ప్రమాదాన్ని తనిఖీ చేయండి →',
+
+        stat1: 'వేగవంతమైన కేస్ విశ్లేషణ',
+        stat2: 'భారతీయ ప్రాంతీయ భాషలు',
+        stat3: 'OTP ధృవీకరించబడిన ప్రవేశం',
+        stat4: 'రియల్ టైమ్ AI సమాధానం',
 
         footer: 'sumscale ప్లాట్‌ఫారమ్ © 2026 — నిర్ణయ సహాయం కోసం మల్టీమోడల్ AI.',
       },
