@@ -194,19 +194,6 @@ const LandingPage = () => {
         {/* ── Hero content (staggered entrance) ── */}
         <div ref={heroRef} className="relative z-10 flex flex-col items-center space-y-7 max-w-4xl mx-auto py-24">
 
-          {/* Badge */}
-          <div data-hero className="flex items-center space-x-2">
-            <div className="relative flex items-center justify-center">
-              <span className="hero-ping absolute w-12 h-12 rounded-full bg-[#83C5BE]/40" />
-              <BrandIcon className="w-12 h-8 text-[#006D77] relative z-10" />
-            </div>
-            <span className="text-[11px] font-extrabold tracking-widest uppercase
-                             text-[#006D77] bg-white/80 backdrop-blur-md
-                             border border-[#83C5BE]/40 px-4 py-1.5 rounded-full shadow-sm">
-              {t('home.badge')}
-            </span>
-          </div>
-
           {/* Headline */}
           <h1 data-hero
               className="text-5xl sm:text-6xl lg:text-7xl font-normal font-serif

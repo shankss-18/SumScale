@@ -130,8 +130,8 @@ export default function Hero3DCanvas() {
     const handleMouseMove = (event) => {
       const windowHalfX = window.innerWidth / 2;
       const windowHalfY = window.innerHeight / 2;
-      mouseX = (event.clientX - windowHalfX) * 0.0012;
-      mouseY = (event.clientY - windowHalfY) * 0.0012;
+      mouseX = (event.clientX - windowHalfX) * 0.0035;
+      mouseY = (event.clientY - windowHalfY) * 0.0035;
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -156,17 +156,17 @@ export default function Hero3DCanvas() {
       const elapsedTime = clock.getElapsedTime();
 
       // Continuous 3D Rotations
-      mainGroup.rotation.y = elapsedTime * 0.15;
-      mainGroup.rotation.x = Math.sin(elapsedTime * 0.1) * 0.1;
+      mainGroup.rotation.y = elapsedTime * 0.3;
+      mainGroup.rotation.x = Math.sin(elapsedTime * 0.2) * 0.15;
 
-      ring1.rotation.z = elapsedTime * 0.25;
-      ring2.rotation.z = -elapsedTime * 0.2;
+      ring1.rotation.z = elapsedTime * 0.45;
+      ring2.rotation.z = -elapsedTime * 0.35;
 
-      bgPoints.rotation.y = elapsedTime * 0.03;
+      bgPoints.rotation.y = elapsedTime * 0.06;
 
-      // Mouse Parallax Lerp
-      targetRotationY += (mouseX - targetRotationY) * 0.05;
-      targetRotationX += (mouseY - targetRotationX) * 0.05;
+      // Fast Responsive Mouse Parallax Lerp
+      targetRotationY += (mouseX - targetRotationY) * 0.25;
+      targetRotationX += (mouseY - targetRotationX) * 0.25;
 
       mainGroup.rotation.y += targetRotationY;
       mainGroup.rotation.x += targetRotationX;

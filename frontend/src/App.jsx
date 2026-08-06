@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -14,6 +14,7 @@ import CaseReport     from './pages/CaseReport';
 import ProfilePage    from './pages/ProfilePage';
 import FraudVerifyPage from './pages/FraudVerifyPage';
 import FloatingChatbot from './components/FloatingChatbot';
+import LanguageModal   from './components/LanguageModal';
 
 /* Inner component so useLocation works inside BrowserRouter */
 function AnimatedRoutes() {
@@ -45,12 +46,26 @@ function AnimatedRoutes() {
 }
 
 function App() {
+  const [isLangModalOpen, setIsLangModalOpen] = useState(() => {
+    return !localStorage.getItem('hasChosenLanguage');
+  });
+
+  useEffect(() => {
+    const handleOpen = () => setIsLangModalOpen(true);
+    window.addEventListener('openLanguageModal', handleOpen);
+    return () => window.removeEventListener('openLanguageModal', handleOpen);
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <Suspense fallback={<AppLoader />}>
           <AnimatedRoutes />
           <FloatingChatbot />
+          <LanguageModal
+            isOpen={isLangModalOpen}
+            onClose={() => setIsLangModalOpen(false)}
+          />
         </Suspense>
       </AuthProvider>
     </BrowserRouter>

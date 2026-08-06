@@ -88,18 +88,31 @@ const Navbar = () => {
 
         {/* Right Controls */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Language Selector */}
-          <select
-            value={i18n.language?.split('-')[0] || 'en'}
-            onChange={(e) => i18n.changeLanguage(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 focus:outline-none focus:border-[#006D77] cursor-pointer"
-          >
-            <option value="en">English (US)</option>
-            <option value="hi">हिन्दी (Hindi)</option>
-            <option value="te">తెలుగు (Telugu)</option>
-            <option value="ta">தமிழ் (Tamil)</option>
-            <option value="kn">ಕನ್ನಡ (Kannada)</option>
-          </select>
+          {/* Language Selector + Pop-up Trigger */}
+          <div className="flex items-center space-x-1 bg-slate-50 border border-slate-200/90 rounded-full px-1.5 py-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('openLanguageModal'))}
+              title="Open Language Selection Modal"
+              className="w-7 h-7 rounded-full hover:bg-slate-200/70 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
+            >
+              🌐
+            </button>
+            <select
+              value={i18n.language?.split('-')[0] || 'en'}
+              onChange={(e) => {
+                i18n.changeLanguage(e.target.value);
+                localStorage.setItem('hasChosenLanguage', 'true');
+              }}
+              className="bg-transparent text-slate-700 text-[11px] sm:text-xs font-semibold pr-2 py-1 focus:outline-none cursor-pointer"
+            >
+              <option value="en">English (US)</option>
+              <option value="hi">हिन्दी (Hindi)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="ta">தமிழ் (Tamil)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            </select>
+          </div>
 
           {user ? (
             /* Account Dropdown Menu (Desktop) */
