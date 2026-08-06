@@ -132,13 +132,18 @@ async def send_otp_identifier(
     # Dispatch email asynchronously in background task
     asyncio.create_task(asyncio.to_thread(send_real_email_otp, clean_email, otp_code))
 
-    return {
+    res = {
         "status": "success",
         "email": clean_email,
         "expires_in_seconds": OTP_EXPIRATION_MINUTES * 60,
         "real_sent": True,
-        "dev_otp": otp_code,
     }
+
+    # Only include dev_otp in automated test environment for pytest suite
+    if os.getenv("ENVIRONMENT") == "test":
+        res["dev_otp"] = otp_code
+
+    return res
 
 
 async def verify_otp_identifier(
@@ -147,16 +152,15 @@ async def verify_otp_identifier(
     otp_code: str
 ) -> Tuple[bool, str]:
     """
-    Verifies OTP code against DB records.
+    Strictly verifies OTP code against database records.
     Returns (is_valid, clean_email or error_message).
-    Supports demo OTPs 123456 and 482910 for testing.
+    Requires exact match with unverified, unexpired OTP code.
     """
     clean_email = normalize_email(email)
     code_clean = otp_code.strip()
 
-    # Universal demo OTPs for testing
-    if code_clean in ["123456", "482910"]:
-        return True, clean_email
+    if not code_clean:
+        return False, "Please enter the 6-digit verification code."
 
     record = await db.otp_verifications.find_one({
         "$or": [{"email": clean_email}, {"identifier": clean_email}],
@@ -165,24 +169,18 @@ async def verify_otp_identifier(
     }, sort=[("created_at", -1)])
 
     if not record:
-        # Check if any record exists for this email address
-        any_record = await db.otp_verifications.find_one({
-            "$or": [{"email": clean_email}, {"identifier": clean_email}]
-        })
-        if any_record or code_clean:
-            # Fallback for dev ease
-            return True, clean_email
         return False, "Invalid OTP code. Please check your Email Inbox and try again."
 
     expires_at = record.get("expires_at")
     if expires_at and datetime.datetime.utcnow() > expires_at:
-        return False, "OTP code has expired. Please request a new code."
+        return False, "OTP code has expired. Please request a new verification code."
 
-    # Mark OTP as verified/invalidated after successful use
+    # Mark OTP as verified after successful use (prevents code reuse)
     await db.otp_verifications.update_one(
         {"_id": record["_id"]},
         {"$set": {"verified": True, "verified_at": datetime.datetime.utcnow()}}
     )
 
     return True, clean_email
+
 

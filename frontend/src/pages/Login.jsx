@@ -174,7 +174,7 @@ const Login = () => {
                       <span>Verification Code Sent!</span>
                     </p>
                     <p className="text-[10px] text-emerald-700">
-                      Check your Email Inbox. (Testing OTP: <span className="font-extrabold underline">123456</span>)
+                      Please check your Email Inbox for your 6-digit verification code.
                     </p>
                   </div>
 
@@ -193,7 +193,7 @@ const Login = () => {
                       required
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="e.g. 482910"
+                      placeholder="e.g. 849201"
                       className="w-full px-4 py-3 text-center tracking-widest rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-300 text-lg font-bold focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all"
                     />
                   </div>

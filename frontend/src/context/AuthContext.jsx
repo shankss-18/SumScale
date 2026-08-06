@@ -109,14 +109,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return meRes.data;
     } catch (err) {
-      // Fallback: If network error or demo OTP or endpoint error, log in user seamlessly!
-      const userEmail = email.trim().toLowerCase();
-      const dummyUser = { id: `user_${Date.now()}`, email: userEmail, created_at: new Date().toISOString() };
-      setUser(dummyUser);
-      localStorage.setItem('access_token', 'otp_token_demo');
-      setAccessToken('otp_token_demo');
       setLoading(false);
-      return dummyUser;
+      const msg = err.response?.data?.detail || err.message || 'OTP verification failed. Please check your code and try again.';
+      setError(msg);
+      throw new Error(msg);
     }
   };
 
