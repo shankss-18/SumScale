@@ -97,6 +97,50 @@ async def test_mismatched_file_extension_rejected(client):
 
 
 @pytest.mark.asyncio
+async def test_upload_txt_file_and_deduplication(client):
+    """Uploading a .txt file extracts plain text correctly, and uploading duplicate filename replaces instead of duplicating."""
+    await client.post(
+        "/auth/register",
+        json={"email": "txtuser@example.com", "password": "password123"},
+    )
+    login_res = await client.post(
+        "/auth/login",
+        json={"email": "txtuser@example.com", "password": "password123"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    case_res = await client.post(
+        "/cases",
+        json={"department": "fraud"},
+        headers=headers,
+    )
+    case_id = get_id(case_res.json())
+
+    # Upload .txt email file
+    files_txt = {"file": ("job_scam_email.txt", b"Subject: Urgent Job Offer\nPlease transfer Rs 5000 via UPI.", "text/plain")}
+    res_txt = await client.post(
+        f"/cases/{case_id}/upload",
+        files=files_txt,
+        headers=headers,
+    )
+    assert res_txt.status_code == 200
+    evidence = res_txt.json()["evidence"]
+    assert len(evidence) == 1
+    assert "Urgent Job Offer" in evidence[0]["extracted_text"]
+
+    # Upload same filename again — must deduplicate (replace) instead of length=2
+    res_dup = await client.post(
+        f"/cases/{case_id}/upload",
+        files=files_txt,
+        headers=headers,
+    )
+    assert res_dup.status_code == 200
+    evidence_dup = res_dup.json()["evidence"]
+    assert len(evidence_dup) == 1
+
+
+@pytest.mark.asyncio
 async def test_cross_user_security_isolation(client):
     """
     CRITICAL SECURITY TEST:

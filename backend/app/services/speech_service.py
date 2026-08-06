@@ -25,7 +25,7 @@ async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
     or direct UTF-8 reading for plain text / CSV.
     """
     # Plain text / CSV files read directly
-    if mime_type in ("text/plain", "text/csv", "application/csv"):
+    if mime_type.startswith("text/") or mime_type in ("text/plain", "text/csv", "application/csv") or file_path.suffix.lower() in (".txt", ".csv"):
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()[:10000]

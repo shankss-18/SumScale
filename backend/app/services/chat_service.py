@@ -24,7 +24,6 @@ _RETRY_BASE_DELAY_S = 5  # seconds — grows exponentially per attempt
 
 
 def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]], threat_report: str = "") -> str:
-    msg_lower = user_message.lower()
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
     summary = findings.get("summary") or findings.get("pattern_classification") or "Case intake completed."
@@ -35,36 +34,18 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
         res += "Please review the risk scores above and take necessary precautions if any entity shows suspicious or malicious ratings."
         return res
 
-    if "warning" in msg_lower or "fever" in msg_lower or "precaution" in msg_lower or "risk" in msg_lower:
-        base = f"Based on your records ({summary}):\n\nKey warning signs to monitor with fever or skin symptoms include:\n"
-        base += "• High or persistent body temperature over 101°F (38.3°C)\n"
-        base += "• Severe headache, stiff neck, shortness of breath, or chest discomfort\n"
-        base += "• Extreme fatigue, dehydration, or spreading skin rash/lesions\n\n"
-        if checklist:
-            base += "Recommended Precautions:\n" + "\n".join(f"• {item}" for item in checklist) + "\n\n"
-        base += "If any of these severe signs develop, please consult a qualified healthcare provider immediately."
-        return base
-    elif "term" in msg_lower or "explain" in msg_lower or "meaning" in msg_lower or "medical" in msg_lower:
-        return (
-            f"Here is a simple explanation of the key terms in your records ({summary}):\n\n"
-            f"• **Psoriasis**: An ongoing skin condition causing red, scaly patches on the skin.\n"
-            f"• **Pyrexia / Fever**: Elevated body temperature indicating the immune system is actively responding.\n"
-            f"• **Symptom Duration**: The timeframe (e.g. 4-5 days) over which signs have been observed.\n\n"
-            f"Please let me know if you would like me to clarify any other specific medical term!"
-        )
-    else:
-        ans = f"I've carefully reviewed your uploaded records ({summary}).\n\n"
-        if checklist:
-            ans += "Key guidance from your case review:\n" + "\n".join(f"• {item}" for item in checklist) + "\n\n"
-        ans += "Feel free to ask any specific question about your symptoms, medication precautions, or test findings!"
-        return ans
+    ans = f"Based on your case records ({summary}):\n\n"
+    if checklist:
+        ans += "Recommended Guidance & Precautions:\n" + "\n".join(f"• {item}" for item in checklist) + "\n\n"
+    ans += "Feel free to ask any specific question about your uploaded evidence, risk factors, or next steps!"
+    return ans
 
 
 import re
 from app.services.fraud_verify import verify_entity
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+|www\.[^\s\"'<>]+")
-_PHONE_RE = re.compile(r"(?:\+91[\-\s]?)?\d[\d\s\-]{8,13}\d")
+_PHONE_RE = re.compile(r"(?:\+91[\-\s]?)?[6-9]\d{9}\b")
 _IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 
@@ -75,27 +56,27 @@ async def _check_fraud_in_chat(user_message: str, user_cases: List[Dict[str, Any
     """
     found_entities = []
     
-    # Extract URLs
+    # Extract URLs from message
     for url in _URL_RE.findall(user_message):
         found_entities.append(("url", url.strip()))
         
-    # Extract Phone numbers
+    # Extract Phone numbers from message
     if not found_entities:
         for ph in _PHONE_RE.findall(user_message):
             clean_ph = ph.strip().replace(" ", "").replace("-", "")
-            if len(clean_ph) >= 10:
+            if len(clean_ph) == 10 and clean_ph[0] in "6789":
                 found_entities.append(("phone", clean_ph))
                 
-    # Extract IPs
+    # Extract IPs from message
     if not found_entities:
         for ip in _IP_RE.findall(user_message):
             found_entities.append(("ip", ip.strip()))
             
-    # Also check if user mentions "fraud", "scam", "verify", "link", "number", "check", "ip"
+    # Check if user explicitly asks to verify/check a link, phone, or threat entity
     msg_lower = user_message.lower()
-    is_fraud_query = any(k in msg_lower for k in ["fraud", "scam", "verify", "phishing", "fake", "check link", "check number", "is this safe", "security"])
+    is_explicit_verify_query = any(k in msg_lower for k in ["verify number", "verify phone", "check link", "check url", "is this phone safe", "is this number safe", "check ip", "verify entity"])
     
-    if not found_entities and is_fraud_query:
+    if not found_entities and is_explicit_verify_query:
         for c in user_cases:
             evidence_list = c.get("evidence", [])
             for ev in evidence_list:
@@ -107,7 +88,7 @@ async def _check_fraud_in_chat(user_message: str, user_cases: List[Dict[str, Any
                 phones = _PHONE_RE.findall(text)
                 if phones:
                     clean_p = phones[0].strip().replace(" ", "").replace("-", "")
-                    if len(clean_p) >= 10:
+                    if len(clean_p) == 10 and clean_p[0] in "6789":
                         found_entities.append(("phone", clean_p))
                         break
             if found_entities:
@@ -236,6 +217,9 @@ YOU MUST WRITE ALL OUTPUT TEXT ("answer", "suggested_next_questions", AND "auto_
 
 CRITICAL CONVERSATIONAL MEMORY RULE:
 You have access to the recent conversation history in <conversation_history>. If the user asks about previous messages (e.g., "What did I say earlier?", "Why did you suggest that?"), refer directly to <conversation_history> to give an accurate, context-aware response without losing track of what was said.
+
+CRITICAL ARTIFACT ANTECEDENT DISAMBIGUATION RULE:
+When the user asks questions referring to "these", "this", "the messages", "the two messages", "these items", or similar without a clear antecedent (e.g., "Are these two messages related to each other?"), YOU MUST ALWAYS INTERPRET IT AS REFERRING TO THE UPLOADED CASE ARTIFACTS / EVIDENCE (e.g. SMS screenshot, email, voice note, PDF), NOT to the AI's prior chat responses. Compare the actual uploaded artifacts directly (e.g., shared scam pattern, shared urgency tactic, shared UPI/contact info, or medical findings) rather than comparing prior chat turns.
 
 CRITICAL TONE & STYLE INSTRUCTIONS (MUST FOLLOW):
 1. SOUND LIKE A CARING HUMAN SPECIALIST: Speak conversationally, warmly, and naturally as if you are a real expert talking to a patient or user.

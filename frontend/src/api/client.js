@@ -114,8 +114,8 @@ export const getFileDownloadUrl = (caseId, fileId) =>
   `${API_BASE_URL}/cases/${caseId}/files/${fileId}`;
 
 // --- Chat & Reminders ---
-export const apiChat = (message, language = 'en', chatHistory = []) =>
-  apiClient.post('/chat', { message, language, chat_history: chatHistory });
+export const apiChat = (message, language = 'en', chatHistory = [], caseId = null) =>
+  apiClient.post('/chat', { message, language, chat_history: chatHistory, case_id: caseId });
 
 export const apiListReminders = (statusFilter = null) => {
   const params = statusFilter ? { status: statusFilter } : {};

@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
         max_length=2000,
         description="User chat message or question about their case history.",
     )
+    case_id: Optional[str] = Field(default=None, description="Optional target case_id to scope retrieval strictly to one case.")
     language: Optional[str] = Field(default="en", description="Output language code (e.g. en, hi, es)")
     chat_history: Optional[List[dict]] = Field(default_factory=list)
 

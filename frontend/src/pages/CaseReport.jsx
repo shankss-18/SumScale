@@ -374,7 +374,7 @@ const CaseReport = () => {
 
       // 3. Query RAG Chatbot with user's selected language and full conversation history
       const lang = i18n.language ? i18n.language.split('-')[0] : (caseData?.language || 'en');
-      const res = await apiChat(userPrompt, lang, updatedMsgs);
+      const res = await apiChat(userPrompt, lang, updatedMsgs, caseId);
       let aiResponseText = res.data?.answer;
       const returnedNextQuestions = res.data?.suggested_next_questions;
       const autoTitle = res.data?.auto_generated_title;

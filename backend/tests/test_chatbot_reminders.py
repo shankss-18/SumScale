@@ -65,6 +65,140 @@ async def test_chatbot_user_isolation(client):
 
 
 @pytest.mark.asyncio
+async def test_chatbot_cross_case_isolation(client):
+    """
+    Same user creates Case A (Health: Warfarin and fever) and Case B (Fraud: Bank SMS scam).
+    Calling POST /chat with case_id=Case B must return ONLY Case B context, with NO Warfarin or fever leakage from Case A!
+    """
+    await client.post(
+        "/auth/register",
+        json={"email": "crosscase_user@example.com", "password": "password123"},
+    )
+    login_res = await client.post(
+        "/auth/login",
+        json={"email": "crosscase_user@example.com", "password": "password123"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create Case A: Health case with Warfarin
+    case_a_res = await client.post(
+        "/cases",
+        json={"department": "health", "description": "Patient takes Warfarin 5mg daily for clotting and has fever."},
+        headers=headers,
+    )
+    case_a_id = case_a_res.json()["_id"]
+
+    # Create Case B: Fraud case about SMS bank scam
+    case_b_res = await client.post(
+        "/cases",
+        json={"department": "fraud", "description": "Received suspicious SMS asking for OTP transfer of Rs 50000."},
+        headers=headers,
+    )
+    case_b_id = case_b_res.json()["_id"]
+
+    # Query chat scoped to Case B
+    chat_res = await client.post(
+        "/chat",
+        json={"message": "What is the main issue described in my uploaded document?", "case_id": case_b_id},
+        headers=headers,
+    )
+    assert chat_res.status_code == 200
+    answer = chat_res.json()["answer"].lower()
+
+    # Must NOT contain unique Case A content (Warfarin, fever, clotting)
+    assert "warfarin" not in answer
+    assert "fever" not in answer
+    assert "clotting" not in answer
+
+
+@pytest.mark.asyncio
+async def test_comparison_query_artifact_disambiguation(client):
+    """
+    User asks 'Are these two messages related to each other?' in a case with SMS screenshot and email scam.
+    System prompt rule forces comparison of artifacts rather than chat turns.
+    """
+    await client.post(
+        "/auth/register",
+        json={"email": "comparison_user@example.com", "password": "password123"},
+    )
+    login_res = await client.post(
+        "/auth/login",
+        json={"email": "comparison_user@example.com", "password": "password123"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    case_res = await client.post(
+        "/cases",
+        json={
+            "department": "fraud",
+            "description": "SMS screenshot claiming SBI account locked and job offer email asking for Rs 5000 UPI.",
+        },
+        headers=headers,
+    )
+    case_id = case_res.json()["_id"]
+
+    chat_history = [
+        {"sender": "user", "text": "Hello, I uploaded my evidence."},
+        {"sender": "bot", "text": "I have received your evidence."},
+    ]
+
+    chat_res = await client.post(
+        "/chat",
+        json={
+            "message": "Are these two messages related to each other?",
+            "case_id": case_id,
+            "chat_history": chat_history,
+        },
+        headers=headers,
+    )
+    assert chat_res.status_code == 200
+    answer = chat_res.json()["answer"].lower()
+    # Response should discuss the uploaded evidence / scam / bank / upi / job offer, NOT comparing previous bot turns
+    assert any(k in answer for k in ["sbi", "scam", "upi", "job", "evidence", "account", "sms", "email", "phishing", "fraud", "case", "record"])
+
+
+@pytest.mark.asyncio
+async def test_no_fake_fraud_report_for_random_numbers(client):
+    """
+    Case with 12-digit IDs/timestamps must NOT generate an unrequested Fraud & Security report for fake phone numbers like 683935705130.
+    """
+    await client.post(
+        "/auth/register",
+        json={"email": "randomnum_user@example.com", "password": "password123"},
+    )
+    login_res = await client.post(
+        "/auth/login",
+        json={"email": "randomnum_user@example.com", "password": "password123"},
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    case_res = await client.post(
+        "/cases",
+        json={
+            "department": "fraud",
+            "description": "System log entry timestamp 683935705130 showing suspicious login.",
+        },
+        headers=headers,
+    )
+    case_id = case_res.json()["_id"]
+
+    chat_res = await client.post(
+        "/chat",
+        json={
+            "message": "Are these two messages related to each other?",
+            "case_id": case_id,
+        },
+        headers=headers,
+    )
+    assert chat_res.status_code == 200
+    answer = chat_res.json()["answer"]
+    assert "Fraud & Security Intelligence Report for `683935705130`" not in answer
+
+
+@pytest.mark.asyncio
 async def test_reminder_scheduler_tick_and_user_isolation(client):
     """
     Creates a reminder set for 10 minutes ago.

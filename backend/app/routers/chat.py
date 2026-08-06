@@ -34,8 +34,12 @@ async def chat_with_assistant(
     if db is None:
         raise HTTPException(status_code=500, detail="Database connection unavailable")
 
-    # SECURITY RULE: Fetch ONLY cases owned by current_user.id
-    cursor = db.cases.find({"user_id": current_user.id}).sort("created_at", -1)
+    # SECURITY RULE: Fetch ONLY cases owned by current_user.id, scoped strictly to case_id if provided
+    query = {"user_id": current_user.id}
+    if body.case_id:
+        query["_id"] = body.case_id
+
+    cursor = db.cases.find(query).sort("created_at", -1)
     user_cases = await cursor.to_list(length=50)
 
     result = await generate_grounded_chat_response(

@@ -152,13 +152,16 @@ async def upload_case_file(
         },
     }
 
+    # Filter out existing evidence item with same original_name to prevent duplicates
+    updated_evidence = [e for e in current_evidence if e.get("original_name") != filename]
+    updated_evidence.append(new_evidence_item)
+
     now = datetime.now(timezone.utc)
 
     await db.cases.update_one(
         {"_id": case_id, "user_id": current_user.id},
         {
-            "$push": {"evidence": new_evidence_item},
-            "$set": {"updated_at": now},
+            "$set": {"evidence": updated_evidence, "updated_at": now},
         },
     )
 
