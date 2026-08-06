@@ -1300,60 +1300,6 @@ const CaseReport = () => {
                 )}
               </div>
 
-              {/* Card 2: Uploaded Evidence Files */}
-              <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-3">
-                <div 
-                  onClick={() => toggleCardCollapse('evidence')}
-                  className="flex items-center justify-between cursor-pointer select-none group"
-                >
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
-                    {t('chat.uploadedEvidence')} ({evidenceList.length})
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EDF6F9] text-[#006D77]">
-                      {t('chat.liveSynced')}
-                    </span>
-                    <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
-                      {collapsedCards['evidence'] ? '▼' : '▲'}
-                    </span>
-                  </div>
-                </div>
-
-                {!collapsedCards['evidence'] && (
-                  evidenceList.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No file attachments</p>
-                  ) : (
-                    <div className="space-y-2 pt-1">
-                      {evidenceList.map((file, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 rounded-2xl bg-[#EDF6F9]/60 border border-[#83C5BE]/30 flex items-center justify-between"
-                        >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-xs font-bold text-slate-800 truncate">
-                              {file.original_name || `File ${idx + 1}`}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              {file.mime_type || file.file_type || 'Document'}
-                            </p>
-                          </div>
-                          {file.file_id && (
-                            <a
-                              href={getFileDownloadUrl(caseId, file.file_id)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-3 py-1 rounded-full bg-[#006D77] text-white text-[10px] font-bold hover:bg-[#005a63] transition-colors"
-                            >
-                              {t('chat.viewFile')}
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )
-                )}
-              </div>
-
               {/* Card 3: Key Concepts & Term Glossary (Interactive AI Pills) */}
               {((findings.symptoms && findings.symptoms.length > 0) ||
                 (findings.likely_associations && findings.likely_associations.length > 0)) && (
