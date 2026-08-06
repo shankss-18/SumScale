@@ -52,6 +52,15 @@ const CaseReport = () => {
   const [customSuggestedPrompts, setCustomSuggestedPrompts] = useState(null);
   const [completedReminders, setCompletedReminders] = useState({});
 
+  // Collapsible Side Panel Cards State
+  const [collapsedCards, setCollapsedCards] = useState({});
+  const toggleCardCollapse = (cardId) => {
+    setCollapsedCards((prev) => ({
+      ...prev,
+      [cardId]: !prev[cardId],
+    }));
+  };
+
   // Editable Chat Title State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
@@ -1234,85 +1243,107 @@ const CaseReport = () => {
 
               {/* Card 1: Key Findings & Summary */}
               <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div 
+                  onClick={() => toggleCardCollapse('insights')}
+                  className="flex items-center justify-between border-b border-slate-100 pb-3 cursor-pointer select-none group"
+                >
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
                     {t('chat.insights')}
                   </span>
-                  <span className="text-xs font-bold text-slate-400">
-                    {caseData.department?.toUpperCase() || 'HEALTH'}
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
-                    {findings.summary || findings.pattern_classification || 'Document Context Analysis'}
-                  </h3>
-                  {findings.pattern_classification && (
-                    <p className="text-xs font-semibold text-[#006D77]">
-                      Pattern: {findings.pattern_classification}
-                    </p>
-                  )}
-                </div>
-
-                {/* Action / Remediation Checklist */}
-                {remediationList.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
-                      {t('chat.actionPlan')}
-                    </p>
-                    <ul className="space-y-1.5">
-                      {remediationList.map((item, idx) => (
-                        <li key={idx} className="text-xs text-slate-700 font-medium flex items-start space-x-2">
-                          <span className="text-[#006D77] font-bold">•</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-slate-400">
+                      {caseData.department?.toUpperCase() || 'HEALTH'}
+                    </span>
+                    <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                      {collapsedCards['insights'] ? '▼' : '▲'}
+                    </span>
                   </div>
+                </div>
+
+                {!collapsedCards['insights'] && (
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
+                        {findings.summary || findings.pattern_classification || 'Document Context Analysis'}
+                      </h3>
+                      {findings.pattern_classification && (
+                        <p className="text-xs font-semibold text-[#006D77]">
+                          Pattern: {findings.pattern_classification}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action / Remediation Checklist */}
+                    {remediationList.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                          {t('chat.actionPlan')}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {remediationList.map((item, idx) => (
+                            <li key={idx} className="text-xs text-slate-700 font-medium flex items-start space-x-2">
+                              <span className="text-[#006D77] font-bold">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
               {/* Card 2: Uploaded Evidence Files */}
               <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-3">
-                <div className="flex items-center justify-between">
+                <div 
+                  onClick={() => toggleCardCollapse('evidence')}
+                  className="flex items-center justify-between cursor-pointer select-none group"
+                >
                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
                     {t('chat.uploadedEvidence')} ({evidenceList.length})
                   </p>
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EDF6F9] text-[#006D77]">
-                    {t('chat.liveSynced')}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EDF6F9] text-[#006D77]">
+                      {t('chat.liveSynced')}
+                    </span>
+                    <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                      {collapsedCards['evidence'] ? '▼' : '▲'}
+                    </span>
+                  </div>
                 </div>
 
-                {evidenceList.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No file attachments</p>
-                ) : (
-                  <div className="space-y-2">
-                    {evidenceList.map((file, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-2xl bg-[#EDF6F9]/60 border border-[#83C5BE]/30 flex items-center justify-between"
-                      >
-                        <div className="min-w-0 flex-1 pr-2">
-                          <p className="text-xs font-bold text-slate-800 truncate">
-                            {file.original_name || `File ${idx + 1}`}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {file.mime_type || file.file_type || 'Document'}
-                          </p>
+                {!collapsedCards['evidence'] && (
+                  evidenceList.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No file attachments</p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      {evidenceList.map((file, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-2xl bg-[#EDF6F9]/60 border border-[#83C5BE]/30 flex items-center justify-between"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-xs font-bold text-slate-800 truncate">
+                              {file.original_name || `File ${idx + 1}`}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {file.mime_type || file.file_type || 'Document'}
+                            </p>
+                          </div>
+                          {file.file_id && (
+                            <a
+                              href={getFileDownloadUrl(caseId, file.file_id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1 rounded-full bg-[#006D77] text-white text-[10px] font-bold hover:bg-[#005a63] transition-colors"
+                            >
+                              {t('chat.viewFile')}
+                            </a>
+                          )}
                         </div>
-                        {file.file_id && (
-                          <a
-                            href={getFileDownloadUrl(caseId, file.file_id)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3 py-1 rounded-full bg-[#006D77] text-white text-[10px] font-bold hover:bg-[#005a63] transition-colors"
-                          >
-                            {t('chat.viewFile')}
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
 
@@ -1320,93 +1351,140 @@ const CaseReport = () => {
               {((findings.symptoms && findings.symptoms.length > 0) ||
                 (findings.likely_associations && findings.likely_associations.length > 0)) && (
                 <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div 
+                    onClick={() => toggleCardCollapse('concepts')}
+                    className="flex items-center justify-between border-b border-slate-100 pb-2 cursor-pointer select-none group"
+                  >
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
                       {t('chat.keyConcepts')}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-semibold">{t('chat.clickToAsk')}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[9px] text-slate-400 font-semibold">{t('chat.clickToAsk')}</span>
+                      <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                        {collapsedCards['concepts'] ? '▼' : '▲'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[...(findings.symptoms || []), ...(findings.likely_associations || [])].map((concept, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSendMessage(`Can you explain '${concept}' in detail based on my uploaded records?`)}
-                        className="px-2.5 py-1 rounded-full bg-[#EDF6F9] hover:bg-[#006D77] hover:text-white border border-[#83C5BE]/40 text-[10px] font-semibold text-[#006D77] transition-all shadow-2xs cursor-pointer hover:scale-102"
-                        title={`Ask AI about ${concept}`}
-                      >
-                        💡 {concept}
-                      </button>
-                    ))}
-                  </div>
+                  {!collapsedCards['concepts'] && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[...(findings.symptoms || []), ...(findings.likely_associations || [])].map((concept, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSendMessage(`Can you explain '${concept}' in detail based on my uploaded records?`)}
+                          className="px-2.5 py-1 rounded-full bg-[#EDF6F9] hover:bg-[#006D77] hover:text-white border border-[#83C5BE]/40 text-[10px] font-semibold text-[#006D77] transition-all shadow-2xs cursor-pointer hover:scale-102"
+                          title={`Ask AI about ${concept}`}
+                        >
+                          💡 {concept}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Card 4: Interactive Action Plan & Reminders */}
               {remediationList.length > 0 && (
                 <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div 
+                    onClick={() => toggleCardCollapse('actionPlan')}
+                    className="flex items-center justify-between border-b border-slate-100 pb-2 cursor-pointer select-none group"
+                  >
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
                       {t('chat.actionPlan')}
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      {Object.values(completedReminders).filter(Boolean).length}/{remediationList.length} Done
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {Object.values(completedReminders).filter(Boolean).length}/{remediationList.length} Done
+                      </span>
+                      <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                        {collapsedCards['actionPlan'] ? '▼' : '▲'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {remediationList.map((item, idx) => {
-                      const isDone = !!completedReminders[idx];
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => setCompletedReminders((prev) => ({ ...prev, [idx]: !prev[idx] }))}
-                          className={`p-2.5 rounded-xl border text-xs font-medium flex items-start space-x-2.5 cursor-pointer transition-all ${
-                            isDone
-                              ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900 line-through opacity-70'
-                              : 'bg-[#F8FCFD] border-[#83C5BE]/30 text-slate-700 hover:border-[#006D77]'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isDone}
-                            onChange={() => {}}
-                            className="mt-0.5 rounded text-[#006D77] focus:ring-[#006D77] cursor-pointer"
-                          />
-                          <span className="flex-1 leading-snug">{item}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <Link
-                    to="/dashboard"
-                    className="block text-center w-full py-2 px-3 rounded-full bg-[#EDF6F9] hover:bg-[#83C5BE]/20 text-[#006D77] text-[10px] font-bold border border-[#83C5BE]/40 transition-colors mt-2"
-                  >
-                    🔔 Manage Smart Reminders on Dashboard →
-                  </Link>
+                  {!collapsedCards['actionPlan'] && (
+                    <>
+                      <div className="space-y-2">
+                        {remediationList.map((item, idx) => {
+                          const isDone = !!completedReminders[idx];
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => setCompletedReminders((prev) => ({ ...prev, [idx]: !prev[idx] }))}
+                              className={`p-2.5 rounded-xl border text-xs font-medium flex items-start space-x-2.5 cursor-pointer transition-all ${
+                                isDone
+                                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900 line-through opacity-70'
+                                  : 'bg-[#F8FCFD] border-[#83C5BE]/30 text-slate-700 hover:border-[#006D77]'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isDone}
+                                onChange={() => {}}
+                                className="mt-0.5 rounded text-[#006D77] focus:ring-[#006D77] cursor-pointer"
+                              />
+                              <span className="flex-1 leading-snug">{item}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <Link
+                        to="/dashboard"
+                        className="block text-center w-full py-2 px-3 rounded-full bg-[#EDF6F9] hover:bg-[#83C5BE]/20 text-[#006D77] text-[10px] font-bold border border-[#83C5BE]/40 transition-colors mt-2"
+                      >
+                        🔔 Manage Smart Reminders on Dashboard →
+                      </Link>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Card 5: Case Audit Metrics & Confidence */}
               <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-4 space-y-2.5 text-xs">
-                <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <div 
+                  onClick={() => toggleCardCollapse('audit')}
+                  className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none group"
+                >
                   <span>{t('chat.audit')}</span>
-                  <span className="text-[#006D77]">{t('chat.grounded')}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-center pt-1">
-                  <div className="p-2 rounded-2xl bg-[#EDF6F9]/50 border border-[#83C5BE]/20">
-                    <p className="text-[9px] text-slate-400 font-bold uppercase">{t('chat.filesScope')}</p>
-                    <p className="text-xs font-extrabold text-[#006D77]">{evidenceList.length} {t('chat.attached')}</p>
-                  </div>
-                  <div className="p-2 rounded-2xl bg-[#EDF6F9]/50 border border-[#83C5BE]/20">
-                    <p className="text-[9px] text-slate-400 font-bold uppercase">{t('chat.riskRating')}</p>
-                    <p className={`text-xs font-extrabold ${flag === 'high' ? 'text-rose-600' : flag === 'medium' ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {flag === 'high' ? t('severity.high') : flag === 'medium' ? t('severity.medium') : t('severity.low')}
-                    </p>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[#006D77]">{t('chat.grounded')}</span>
+                    <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                      {collapsedCards['audit'] ? '▼' : '▲'}
+                    </span>
                   </div>
                 </div>
+                {!collapsedCards['audit'] && (
+                  <div className="grid grid-cols-2 gap-2 text-center pt-1">
+                    <div className="p-2 rounded-2xl bg-[#EDF6F9]/50 border border-[#83C5BE]/20">
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{t('chat.filesScope')}</p>
+                      <p className="text-xs font-extrabold text-[#006D77]">{evidenceList.length} {t('chat.attached')}</p>
+                    </div>
+                    <div className="p-2 rounded-2xl bg-[#EDF6F9]/50 border border-[#83C5BE]/20">
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{t('chat.riskRating')}</p>
+                      <p className={`text-xs font-extrabold ${flag === 'high' ? 'text-rose-600' : flag === 'medium' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {flag === 'high' ? t('severity.high') : flag === 'medium' ? t('severity.medium') : t('severity.low')}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Card 5: 100% Free Notification & Google Calendar Reminders */}
-              <CaseReminderCard caseData={caseData} />
+              {/* Card 6: 100% Free Notification & Google Calendar Reminders */}
+              <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-4 space-y-2">
+                <div 
+                  onClick={() => toggleCardCollapse('reminders')}
+                  className="flex items-center justify-between cursor-pointer select-none group"
+                >
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#006D77]">
+                    🔔 Case Reminders & Calendar
+                  </span>
+                  <span className="text-xs text-slate-400 group-hover:text-[#006D77] transition-colors">
+                    {collapsedCards['reminders'] ? '▼' : '▲'}
+                  </span>
+                </div>
+                {!collapsedCards['reminders'] && (
+                  <CaseReminderCard caseData={caseData} />
+                )}
+              </div>
 
             </div>
           )}
