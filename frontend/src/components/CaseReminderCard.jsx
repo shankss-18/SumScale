@@ -66,80 +66,50 @@ export default function CaseReminderCard({ caseData }) {
   };
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      border: '1px solid rgba(131,197,190,0.3)',
-      borderRadius: 20,
-      padding: 20,
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-      marginTop: 20,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <span style={{ fontSize: 24 }}>🔔</span>
+    <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-4">
+      <div className="flex items-center space-x-3">
+        <span className="text-2xl">🔔</span>
         <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>
+          <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
             Constant Notifications &amp; Reminders
           </h3>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>
-            Never miss a follow-up — set free Gmail email alerts, SMS, or Google Calendar reminders.
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Set free Gmail email alerts or 1-click Google Calendar reminders.
           </p>
         </div>
       </div>
 
       {/* Date & Time Picker */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 6, letterSpacing: '0.05em' }}>
+      <div>
+        <label className="block text-[10px] font-extrabold uppercase tracking-widest text-[#006D77] mb-1.5">
           SCHEDULE FOLLOW-UP DATE &amp; TIME (OPTIONAL)
         </label>
         <input
           type="datetime-local"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          style={{
-            width: '100%',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 10,
-            color: '#f1f5f9',
-            fontSize: 13,
-            padding: '8px 12px',
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
+          className="w-full bg-[#EDF6F9] border border-[#83C5BE]/50 text-slate-800 text-xs font-semibold rounded-2xl px-3.5 py-2.5 focus:outline-none focus:border-[#006D77] cursor-pointer"
         />
       </div>
 
       {errorMsg && (
-        <div style={{ fontSize: 12, color: '#f87171', marginBottom: 12, background: 'rgba(239,68,68,0.1)', padding: '6px 10px', borderRadius: 8 }}>
+        <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
           ⚠️ {errorMsg}
         </div>
       )}
 
+      {emailSent && (
+        <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center">
+          ✅ Free Email Alert sent to {user?.email}!
+        </div>
+      )}
+
       {/* 1-Click Action Buttons */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="flex flex-col sm:flex-row gap-2 pt-1">
         <button
           type="button"
           onClick={handleOpenGoogleCalendar}
-          style={{
-            flex: 1,
-            minWidth: 160,
-            background: 'linear-gradient(135deg, #4285F4, #34A853)',
-            border: 'none',
-            borderRadius: 12,
-            color: '#ffffff',
-            fontSize: 12,
-            fontWeight: 700,
-            padding: '10px 14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            boxShadow: '0 2px 8px rgba(66,133,244,0.3)',
-            transition: 'transform 0.15s, opacity 0.15s',
-          }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
-          onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          className="flex-1 py-2.5 px-3.5 rounded-full bg-[#006D77] hover:bg-[#005a63] text-white font-extrabold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
         >
           📅 Add to Google Calendar
         </button>
@@ -148,33 +118,14 @@ export default function CaseReminderCard({ caseData }) {
           type="button"
           onClick={handleSendEmailAlert}
           disabled={sendingEmail}
-          style={{
-            flex: 1,
-            minWidth: 160,
-            background: sendingEmail ? 'rgba(0,109,119,0.3)' : 'linear-gradient(135deg, #006D77, #00B4D8)',
-            border: 'none',
-            borderRadius: 12,
-            color: '#ffffff',
-            fontSize: 12,
-            fontWeight: 700,
-            padding: '10px 14px',
-            cursor: sendingEmail ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            boxShadow: '0 2px 8px rgba(0,109,119,0.3)',
-            transition: 'transform 0.15s, opacity 0.15s',
-          }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
-          onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          className="flex-1 py-2.5 px-3.5 rounded-full bg-[#EDF6F9] hover:bg-[#83C5BE]/30 text-[#006D77] border border-[#83C5BE]/50 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
         >
-          {sendingEmail ? '⏳ Sending Email…' : emailSent ? '✅ Email Sent!' : '📧 Send Email Alert (Gmail)'}
+          {sendingEmail ? '⏳ Sending…' : '📧 Send Email Alert'}
         </button>
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 11, color: '#64748b', textAlign: 'center' }}>
-        ⚡ 100% Free • No paid accounts required • Instant delivery to {user?.email}
+      <div className="text-[10px] text-slate-400 font-medium text-center pt-1">
+        ⚡ 100% Free • Delivered via Gmail SMTP to {user?.email}
       </div>
     </div>
   );
