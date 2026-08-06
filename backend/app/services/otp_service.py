@@ -37,31 +37,21 @@ def normalize_email(email: str) -> str:
 
 def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
     """
-    Sends a real, beautifully formatted HTML OTP email via SMTP.
-    Uses configurable SMTP settings with Gmail fallback.
+    Dispatches a real HTML OTP email using:
+    1. Resend REST API (HTTPS Port 443 — 100% cloud reliable, free 3,000/mo)
+    2. Brevo REST API (HTTPS Port 443 — free 300/day)
+    3. SMTP Fallback (Gmail / Custom SMTP)
     """
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 465))
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    sender_email = os.getenv("SMTP_FROM_EMAIL") or smtp_user or "noreply@sumscale.ai"
+    resend_key = os.getenv("RESEND_API_KEY")
+    brevo_key = os.getenv("BREVO_API_KEY")
 
-    if not smtp_user or not smtp_password:
-        logger.warning(f"SMTP_USER/SMTP_PASSWORD not set in .env. Falling back to dev mode OTP: {otp_code}")
-        return False
-
-    msg = MIMEMultipart()
-    msg["From"] = f"SumScale Security <{sender_email}>"
-    msg["To"] = recipient_email
-    msg["Subject"] = f"{otp_code} is your SumScale verification code"
-
-    body = f"""
+    html_content = f"""
     <!DOCTYPE html>
     <html>
       <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333;">
         <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #83C5BE; border-radius: 24px; padding: 32px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
           <h2 style="color: #006D77; margin-top: 0; font-size: 22px;">SumScale Verification Code</h2>
-          <p style="font-size: 14px; color: #555; line-height: 1.5;">Use the following 6-digit verification code to complete your login or registration:</p>
+          <p style="font-size: 14px; color: #555; line-height: 1.5;">Use the following 6-digit verification code to complete your sign in or account registration:</p>
           <div style="background: #EDF6F9; border: 1px solid #83C5BE; border-radius: 16px; padding: 18px; margin: 24px 0; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #006D77;">
             {otp_code}
           </div>
@@ -72,30 +62,97 @@ def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
       </body>
     </html>
     """
-    msg.attach(MIMEText(body, "html"))
 
-    # Attempt SSL or STARTTLS based on port
-    if smtp_port == 465:
+    # 1. Try Resend REST API (Best for cloud hosts like Render)
+    if resend_key:
         try:
-            with smtplib.SMTP_SSL(smtp_host, 465, timeout=4.0) as server:
+            import httpx
+            sender = os.getenv("RESEND_FROM_EMAIL", "SumScale Security <onboarding@resend.dev>")
+            res = httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": sender,
+                    "to": [recipient_email],
+                    "subject": f"{otp_code} is your SumScale verification code",
+                    "html": html_content,
+                },
+                timeout=8.0,
+            )
+            if res.status_code in (200, 201):
+                logger.info(f"✅ Real Email OTP delivered to {recipient_email} via Resend REST API")
+                return True
+            else:
+                logger.error(f"❌ Resend API error ({res.status_code}): {res.text}")
+        except Exception as e:
+            logger.error(f"❌ Resend API dispatch failed: {e}")
+
+    # 2. Try Brevo REST API
+    if brevo_key:
+        try:
+            import httpx
+            sender_email = os.getenv("SMTP_FROM_EMAIL", "noreply@sumscale.ai")
+            res = httpx.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "api-key": brevo_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "sender": {"name": "SumScale Security", "email": sender_email},
+                    "to": [{"email": recipient_email}],
+                    "subject": f"{otp_code} is your SumScale verification code",
+                    "htmlContent": html_content,
+                },
+                timeout=8.0,
+            )
+            if res.status_code in (200, 201):
+                logger.info(f"✅ Real Email OTP delivered to {recipient_email} via Brevo REST API")
+                return True
+            else:
+                logger.error(f"❌ Brevo API error ({res.status_code}): {res.text}")
+        except Exception as e:
+            logger.error(f"❌ Brevo API dispatch failed: {e}")
+
+    # 3. SMTP Fallback (Gmail / Custom SMTP)
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    if smtp_user and smtp_password:
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 465))
+        sender_email = os.getenv("SMTP_FROM_EMAIL") or smtp_user or "noreply@sumscale.ai"
+
+        msg = MIMEMultipart()
+        msg["From"] = f"SumScale Security <{sender_email}>"
+        msg["To"] = recipient_email
+        msg["Subject"] = f"{otp_code} is your SumScale verification code"
+        msg.attach(MIMEText(html_content, "html"))
+
+        if smtp_port == 465:
+            try:
+                with smtplib.SMTP_SSL(smtp_host, 465, timeout=4.0) as server:
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(sender_email, recipient_email, msg.as_string())
+                logger.info(f"✅ Real Email OTP delivered to {recipient_email} via SSL")
+                return True
+            except Exception as e:
+                logger.warning(f"Port 465 SSL failed for {recipient_email}: {e}. Retrying on Port 587 STARTTLS...")
+
+        try:
+            with smtplib.SMTP(smtp_host, 587, timeout=4.0) as server:
+                server.starttls()
                 server.login(smtp_user, smtp_password)
                 server.sendmail(sender_email, recipient_email, msg.as_string())
-            logger.info(f"✅ Real Email OTP delivered to {recipient_email} via SSL")
+            logger.info(f"✅ Real Email OTP delivered to {recipient_email} via STARTTLS")
             return True
         except Exception as e:
-            logger.warning(f"Port 465 SSL failed for {recipient_email}: {e}. Retrying on Port 587 STARTTLS...")
+            logger.error(f"❌ SMTP delivery failed for {recipient_email}: {e}")
 
-    # Port 587 / Fallback
-    try:
-        with smtplib.SMTP(smtp_host, 587, timeout=4.0) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.sendmail(sender_email, recipient_email, msg.as_string())
-        logger.info(f"✅ Real Email OTP delivered to {recipient_email} via STARTTLS")
-        return True
-    except Exception as e:
-        logger.error(f"❌ SMTP delivery failed for {recipient_email}: {e}")
-        return False
+    logger.warning("⚠️ No valid email provider configured (RESEND_API_KEY, BREVO_API_KEY, or SMTP_USER). Email not sent.")
+    return False
 
 
 async def send_otp_identifier(
