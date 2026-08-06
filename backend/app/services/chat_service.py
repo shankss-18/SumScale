@@ -201,27 +201,36 @@ Return ONLY a valid JSON object matching this schema:
                     await asyncio.sleep(wait_s)
                     continue
                 else:
-                    logger.error(
-                        f"Rate-limit: all {_MAX_RETRIES} retries exhausted. "
-                        f"Returning user-friendly rate-limit message."
-                    )
+                    # All retries exhausted — return a grounded answer based on case data
+                    logger.warning("Rate-limit: all retries exhausted. Returning grounded local fallback.")
                     return {
-                        "answer": (
-                            "I'm sorry — I'm receiving a lot of requests right now and hit a brief rate limit. "
-                            "Please wait 30–60 seconds and ask me again. Your records are safe and I'll be ready "
-                            "to help you shortly!"
-                        ),
+                        "answer": _build_grounded_fallback_answer(user_message, user_cases),
                         "cited_cases": [],
+                        "suggested_next_questions": [
+                            "What are the main risk factors in my document?",
+                            "Explain key medical / technical terms simply",
+                            "What step-by-step precautions should I take?"
+                        ],
                     }
             else:
                 logger.error(f"Error during RAG chat response generation: {exc}")
                 return {
                     "answer": _build_grounded_fallback_answer(user_message, user_cases),
                     "cited_cases": [],
+                    "suggested_next_questions": [
+                        "What are the main risk factors in my document?",
+                        "Explain key medical / technical terms simply",
+                        "What step-by-step precautions should I take?"
+                    ],
                 }
 
     logger.error(f"Unexpected exit from retry loop: {last_exc}")
     return {
         "answer": _build_grounded_fallback_answer(user_message, user_cases),
         "cited_cases": [],
+        "suggested_next_questions": [
+            "What are the main risk factors in my document?",
+            "Explain key medical / technical terms simply",
+            "What step-by-step precautions should I take?"
+        ],
     }
