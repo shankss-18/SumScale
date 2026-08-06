@@ -7,7 +7,7 @@ import Hero3DCanvas from '../components/Hero3DCanvas';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
-/* ─── Staggered entrance helper ─────────────────────────────────── */
+/* ─── Staggered entrance helper (hero) ──────────────────────────── */
 function useHeroEntrance() {
   const ref = useRef(null);
   useEffect(() => {
@@ -28,27 +28,69 @@ function useHeroEntrance() {
   return ref;
 }
 
+/* ─── Scroll-reveal hook (IntersectionObserver) ─────────────────── */
+function useScrollReveal() {
+  useEffect(() => {
+    const targets = document.querySelectorAll('[data-reveal]');
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            const delay = el.dataset.revealDelay || '0';
+            el.style.transitionDelay = `${delay}s`;
+            el.classList.add('revealed');
+            io.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    targets.forEach((t) => io.observe(t));
+    return () => io.disconnect();
+  }, []);
+}
+
 const LandingPage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const heroRef = useHeroEntrance();
+  useScrollReveal(); // wires IntersectionObserver to all [data-reveal] elements
 
   return (
     <div className="min-h-screen bg-[#EDF6F9] text-slate-800 flex flex-col font-sans antialiased">
 
       <style>{`
-        /* ── Scroll-reveal for below-fold sections ── */
-        @keyframes lp-reveal {
-          from { opacity: 0; transform: translateY(30px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .lp-reveal {
+        /* ── Scroll-reveal base state (IntersectionObserver driven) ── */
+        [data-reveal] {
           opacity: 0;
-          animation: lp-reveal 0.75s cubic-bezier(0.22,1,0.36,1) forwards;
+          transform: translateY(32px);
+          transition:
+            opacity  0.72s cubic-bezier(0.22,1,0.36,1),
+            transform 0.72s cubic-bezier(0.22,1,0.36,1);
         }
-        .lp-reveal-d1 { animation-delay: 0.05s; }
-        .lp-reveal-d2 { animation-delay: 0.18s; }
-        .lp-reveal-d3 { animation-delay: 0.30s; }
+        [data-reveal].revealed {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* ── Capability card pop (layered over base reveal) ── */
+        .cap-card {
+          opacity: 0;
+          transform: translateY(40px) scale(0.97);
+          transition:
+            opacity   0.68s cubic-bezier(0.22,1,0.36,1),
+            transform 0.68s cubic-bezier(0.22,1,0.36,1),
+            box-shadow 0.32s ease;
+        }
+        .cap-card.revealed {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        .cap-card:hover {
+          transform: translateY(-7px) scale(1.012) !important;
+          box-shadow: 0 20px 48px -8px rgba(0,109,119,0.18);
+        }
 
         /* ── Capability cards hover lift ── */
         .capability-card {
@@ -104,11 +146,11 @@ const LandingPage = () => {
         {/* ── 3D Canvas ── */}
         <Hero3DCanvas />
 
-        {/* ── Deep radial glow behind text ── */}
+        {/* ── Subtle top & bottom edge fades only — NO centre blob ── */}
         <div className="absolute inset-0 pointer-events-none"
              style={{
                background:
-                 'radial-gradient(ellipse 70% 55% at 50% 55%, rgba(131,197,190,0.22) 0%, transparent 70%)',
+                 'linear-gradient(to bottom, rgba(237,246,249,0.55) 0%, transparent 18%, transparent 80%, rgba(237,246,249,0.65) 100%)',
              }} />
 
         {/* ── Hero content (staggered entrance) ── */}
@@ -203,7 +245,7 @@ const LandingPage = () => {
                className="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full space-y-14 scroll-mt-24">
 
         {/* Section header */}
-        <div className="space-y-5 text-center max-w-3xl mx-auto lp-reveal lp-reveal-d1">
+        <div data-reveal data-reveal-delay="0" className="space-y-5 text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full
                           bg-[#EDF6F9] border border-[#83C5BE]/40">
             <BrandIcon className="w-5 h-3.5 text-[#006D77]" />
@@ -227,9 +269,10 @@ const LandingPage = () => {
 
           {/* Card 1 — Voice */}
           <Link to="/new-case"
-                className="capability-card lp-reveal lp-reveal-d1 bg-white border border-[#83C5BE]/30 p-8
+                data-reveal data-reveal-delay="0.06"
+                className="cap-card bg-white border border-[#83C5BE]/30 p-8
                            flex flex-col justify-between space-y-6 no-underline relative
-                           overflow-hidden shadow-sm hover:shadow-xl"
+                           overflow-hidden shadow-sm"
                 style={{ borderRadius: '2.5rem 1.5rem 2.5rem 1.5rem' }}>
             <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full pointer-events-none
                             transition-transform duration-500 group-hover:scale-125"
@@ -272,9 +315,10 @@ const LandingPage = () => {
 
           {/* Card 2 — Documents (dark featured) */}
           <Link to="/new-case"
-                className="capability-card lp-reveal lp-reveal-d2 bg-[#006D77] text-white border border-[#006D77]
+                data-reveal data-reveal-delay="0.18"
+                className="cap-card bg-[#006D77] text-white border border-[#006D77]
                            p-8 flex flex-col justify-between space-y-6 no-underline relative
-                           overflow-hidden shadow-xl hover:shadow-2xl"
+                           overflow-hidden shadow-xl"
                 style={{ borderRadius: '1.5rem 2.5rem 1.5rem 2.5rem' }}>
             <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full pointer-events-none
                             opacity-20 transition-transform duration-500 group-hover:scale-125"
@@ -316,9 +360,10 @@ const LandingPage = () => {
 
           {/* Card 3 — Fraud */}
           <Link to="/new-case"
-                className="capability-card lp-reveal lp-reveal-d3 bg-white border border-[#83C5BE]/30 p-8
+                data-reveal data-reveal-delay="0.30"
+                className="cap-card bg-white border border-[#83C5BE]/30 p-8
                            flex flex-col justify-between space-y-6 no-underline relative
-                           overflow-hidden shadow-sm hover:shadow-xl"
+                           overflow-hidden shadow-sm"
                 style={{ borderRadius: '2.5rem 1.5rem 2.5rem 1.5rem' }}>
             <div className="absolute -top-6 -left-6 w-32 h-32 rounded-full pointer-events-none
                             transition-transform duration-500 group-hover:scale-125"
@@ -362,7 +407,8 @@ const LandingPage = () => {
         </div>
 
         {/* ── Impact metrics banner ── */}
-        <div className="lp-reveal lp-reveal-d3 rounded-3xl
+        <div data-reveal data-reveal-delay="0.1"
+             className="rounded-3xl
                         bg-gradient-to-r from-[#003840] via-[#006D77] to-[#005A63]
                         text-white p-8 sm:p-10 shadow-xl
                         grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
