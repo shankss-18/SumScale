@@ -28,6 +28,7 @@ slowapi==0.1.9
 python-dotenv==1.0.1
 python-json-logger==3.2.1
 httpx==0.28.1
+certifi==2024.12.14
 
 # --- Testing ---
 pytest==8.3.4

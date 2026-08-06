@@ -63,9 +63,19 @@ async def lifespan(app: FastAPI):
     # --- Verify MongoDB connectivity ---
     mongo_client: AsyncIOMotorClient | None = None
     try:
+        mongo_kwargs = {
+            "serverSelectionTimeoutMS": 10000,
+            "connectTimeoutMS": 10000,
+        }
+        try:
+            import certifi
+            mongo_kwargs["tlsCAFile"] = certifi.where()
+        except Exception:
+            pass
+
         mongo_client = AsyncIOMotorClient(
             settings.MONGODB_URL,
-            serverSelectionTimeoutMS=5000,
+            **mongo_kwargs
         )
         await mongo_client.admin.command("ping")
         logger.info("MongoDB connection verified")
