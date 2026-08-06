@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
 import CaseReminderCard from '../components/CaseReminderCard';
 import FormattedChatMessage from '../components/FormattedChatMessage';
+import SourceFusionBadge from '../components/SourceFusionBadge';
 import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory, apiSendEmailAlert, apiUpdateCaseCategory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -941,6 +942,32 @@ const CaseReport = () => {
                             : 'bg-[#EDF6F9]/70 border border-[#83C5BE]/40 text-slate-800 rounded-tl-none shadow-2xs font-normal'
                         }`}
                       >
+                        {/* Source Fusion Badge (Only for AI messages) */}
+                        {!isUser && (
+                          <SourceFusionBadge
+                            sources={
+                              m.sources && m.sources.length > 0
+                                ? m.sources
+                                : (caseData?.evidence && caseData.evidence.length > 0)
+                                ? caseData.evidence.map((e) => {
+                                    const name = e.original_name || 'Evidence File';
+                                    const mime = (e.file_type || '').toLowerCase();
+                                    const ext = name.split('.').pop().toLowerCase();
+                                    let type = 'document';
+                                    if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
+                                      type = 'image';
+                                    } else if (mime.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'ogg', 'webm'].includes(ext) || name.toLowerCase().includes('voice')) {
+                                      type = 'audio';
+                                    } else if (mime === 'text/plain' || ext === 'txt' || name === 'user_description.txt') {
+                                      type = 'text';
+                                    }
+                                    return { type, label: name };
+                                  })
+                                : [{ type: 'document', label: 'Document Context' }]
+                            }
+                          />
+                        )}
+
                         {/* Text Content */}
                         {m.text && (
                           isUser ? (
