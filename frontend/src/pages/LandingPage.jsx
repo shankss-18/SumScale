@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import BrandIcon from '../components/BrandIcon';
 import Footer from '../components/Footer';
+import Hero3DCanvas from '../components/Hero3DCanvas';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
@@ -14,58 +15,111 @@ const LandingPage = () => {
     <div className="min-h-screen bg-[#EDF6F9] text-slate-800 flex flex-col font-sans antialiased sarvam-gradient-bg">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center space-y-8">
-        {/* Brand Icon Ornament */}
-        <div className="flex flex-col items-center space-y-3">
-          <BrandIcon className="w-16 h-10 text-[#006D77]" />
-          <span className="text-xs font-semibold tracking-wide text-[#006D77]">
-            {t('home.badge')}
-          </span>
+      <style>{`
+        @keyframes hero-float-1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+          50% { transform: translateY(-12px) rotate(1.5deg) scale(1.02); }
+        }
+        @keyframes hero-float-2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+          50% { transform: translateY(14px) rotate(-1.5deg) scale(1.02); }
+        }
+        .hero-glass-badge-1 {
+          animation: hero-float-1 5s ease-in-out infinite;
+        }
+        .hero-glass-badge-2 {
+          animation: hero-float-2 6s ease-in-out infinite 0.5s;
+        }
+      `}</style>
+
+      {/* ── 3D Interactive Primary Hero Section ── */}
+      <section className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full text-center flex flex-col items-center justify-center min-h-[560px] overflow-hidden">
+        {/* 3D WebGL Particle Neural Canvas Background */}
+        <Hero3DCanvas />
+
+        {/* Ambient Gradient Radial Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-[#83C5BE]/30 to-[#006D77]/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* 3D Floating Interactive Glass Card — Left */}
+        <div className="hidden lg:flex hero-glass-badge-1 absolute left-4 top-1/4 bg-white/75 backdrop-blur-xl border border-[#83C5BE]/60 rounded-2xl p-3.5 shadow-xl items-center space-x-3 text-left pointer-events-auto hover:scale-108 transition-transform cursor-pointer">
+          <div className="w-10 h-10 rounded-xl bg-[#006D77] text-white flex items-center justify-center text-lg shadow-xs">
+            🎙️
+          </div>
+          <div>
+            <p className="text-[10px] font-extrabold uppercase text-[#006D77] tracking-wider">Voice Intelligence</p>
+            <p className="text-xs font-extrabold text-slate-800">Regional Speech-to-Text</p>
+          </div>
         </div>
 
-        {/* Hero Heading */}
-        <h1 className="text-5xl sm:text-7xl font-normal font-serif text-[#006D77] tracking-tight leading-tight max-w-4xl mx-auto">
-          {t('home.heroTitle')}
-        </h1>
+        {/* 3D Floating Interactive Glass Card — Right */}
+        <div className="hidden lg:flex hero-glass-badge-2 absolute right-4 bottom-1/4 bg-white/75 backdrop-blur-xl border border-[#83C5BE]/60 rounded-2xl p-3.5 shadow-xl items-center space-x-3 text-left pointer-events-auto hover:scale-108 transition-transform cursor-pointer">
+          <div className="w-10 h-10 rounded-xl bg-[#83C5BE] text-[#006D77] flex items-center justify-center text-lg shadow-xs font-bold">
+            📄
+          </div>
+          <div>
+            <p className="text-[10px] font-extrabold uppercase text-[#006D77] tracking-wider">Document OCR</p>
+            <p className="text-xs font-extrabold text-slate-800">Structured Fact Extraction</p>
+          </div>
+        </div>
 
-        <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-normal">
-          {t('home.card1Desc')}
-        </p>
+        {/* Foreground Content */}
+        <div className="relative z-10 space-y-8 max-w-4xl mx-auto">
+          {/* Brand Icon Ornament with Animated Pulse Ring */}
+          <div className="flex flex-col items-center space-y-3">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-16 h-16 rounded-full bg-[#83C5BE]/30 animate-ping" />
+              <BrandIcon className="w-16 h-10 text-[#006D77] relative z-10 drop-shadow-sm" />
+            </div>
+            <span className="text-xs font-extrabold tracking-wider uppercase text-[#006D77] bg-white/80 backdrop-blur-md border border-[#83C5BE]/40 px-4 py-1 rounded-full shadow-2xs">
+              {t('home.badge')}
+            </span>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-          {user ? (
-            <>
-              <Link
-                to="/new-case"
-                className="bg-[#006D77] text-white hover:bg-[#005a63] rounded-full px-7 py-3.5 text-xs font-bold transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
-              >
-                {t('nav.uploadBtn')}
-              </Link>
-              <Link
-                to="/dashboard"
-                className="bg-white border border-[#83C5BE]/60 text-[#006D77] hover:bg-[#EDF6F9] rounded-full px-7 py-3.5 text-xs font-bold transition-all shadow-2xs hover:scale-105 active:scale-95"
-              >
-                {t('nav.dashboard')}
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="bg-[#006D77] text-white hover:bg-[#005a63] rounded-full px-7 py-3.5 text-xs font-bold transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
-              >
-                {t('nav.signIn')}
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-white border border-[#83C5BE]/60 text-[#006D77] hover:bg-[#EDF6F9] rounded-full px-7 py-3.5 text-xs font-bold transition-all shadow-2xs hover:scale-105 active:scale-95"
-              >
-                {t('nav.register')}
-              </Link>
-            </>
-          )}
+          {/* Hero Heading */}
+          <h1 className="text-5xl sm:text-7xl font-normal font-serif text-[#006D77] tracking-tight leading-tight max-w-4xl mx-auto drop-shadow-2xs">
+            {t('home.heroTitle')}
+          </h1>
+
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium bg-white/40 backdrop-blur-xs p-3 rounded-2xl border border-white/60">
+            {t('home.card1Desc')}
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            {user ? (
+              <>
+                <Link
+                  to="/new-case"
+                  className="bg-[#006D77] text-white hover:bg-[#005a63] rounded-full px-8 py-4 text-xs sm:text-sm font-extrabold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 flex items-center space-x-2"
+                >
+                  <span>{t('nav.uploadBtn')}</span>
+                  <span>→</span>
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="bg-white/90 border border-[#83C5BE] text-[#006D77] hover:bg-[#EDF6F9] rounded-full px-8 py-4 text-xs sm:text-sm font-extrabold transition-all shadow-xs hover:scale-105 active:scale-95"
+                >
+                  {t('nav.dashboard')}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="bg-[#006D77] text-white hover:bg-[#005a63] rounded-full px-8 py-4 text-xs sm:text-sm font-extrabold transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 flex items-center space-x-2"
+                >
+                  <span>{t('nav.signIn')}</span>
+                  <span>→</span>
+                </Link>
+                <Link
+                  to="/signup"
+                  className="bg-white/90 border border-[#83C5BE] text-[#006D77] hover:bg-[#EDF6F9] rounded-full px-8 py-4 text-xs sm:text-sm font-extrabold transition-all shadow-xs hover:scale-105 active:scale-95"
+                >
+                  {t('nav.register')}
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
