@@ -83,17 +83,6 @@ const Navbar = () => {
             </Link>
           )}
 
-          {user && (
-            <Link
-              to="/fraud-verify"
-              className={`hover:text-[#006D77] transition-colors flex items-center gap-1 ${
-                location.pathname === '/fraud-verify' ? 'text-[#006D77] border-b-2 border-[#006D77] pb-0.5' : ''
-              }`}
-            >
-              🛡️ FRAUD CHECK
-            </Link>
-          )}
-
         </nav>
 
         {/* Right Controls */}

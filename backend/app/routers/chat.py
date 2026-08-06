@@ -43,6 +43,7 @@ async def chat_with_assistant(
         user_cases=user_cases,
         language=body.language or "en",
         chat_history=body.chat_history or [],
+        db=db,
     )
 
     return ChatResponse(

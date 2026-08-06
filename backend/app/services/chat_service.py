@@ -23,12 +23,17 @@ _MAX_RETRIES = 3
 _RETRY_BASE_DELAY_S = 5  # seconds — grows exponentially per attempt
 
 
-def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]]) -> str:
+def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]], threat_report: str = "") -> str:
     msg_lower = user_message.lower()
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
-    summary = findings.get("summary") or findings.get("pattern_classification") or "Medical records intake completed."
+    summary = findings.get("summary") or findings.get("pattern_classification") or "Case intake completed."
     checklist = findings.get("remediation_checklist", [])
+
+    if threat_report:
+        res = f"I have run a real-time threat intelligence verification on your query.\n\n{threat_report}\n\n"
+        res += "Please review the risk scores above and take necessary precautions if any entity shows suspicious or malicious ratings."
+        return res
 
     if "warning" in msg_lower or "fever" in msg_lower or "precaution" in msg_lower or "risk" in msg_lower:
         base = f"Based on your records ({summary}):\n\nKey warning signs to monitor with fever or skin symptoms include:\n"
@@ -55,17 +60,118 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
         return ans
 
 
+import re
+from app.services.fraud_verify import verify_entity
+
+_URL_RE = re.compile(r"https?://[^\s\"'<>]+|www\.[^\s\"'<>]+")
+_PHONE_RE = re.compile(r"(?:\+91[\-\s]?)?\d[\d\s\-]{8,13}\d")
+_IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+
+
+async def _check_fraud_in_chat(user_message: str, user_cases: List[Dict[str, Any]], db: Any = None) -> str:
+    """
+    Scans user message (and cases) for URLs, phone numbers, IPs, or domains,
+    runs verify_entity on them, and formats a human-readable threat analysis table with scores.
+    """
+    found_entities = []
+    
+    # Extract URLs
+    for url in _URL_RE.findall(user_message):
+        found_entities.append(("url", url.strip()))
+        
+    # Extract Phone numbers
+    if not found_entities:
+        for ph in _PHONE_RE.findall(user_message):
+            clean_ph = ph.strip().replace(" ", "").replace("-", "")
+            if len(clean_ph) >= 10:
+                found_entities.append(("phone", clean_ph))
+                
+    # Extract IPs
+    if not found_entities:
+        for ip in _IP_RE.findall(user_message):
+            found_entities.append(("ip", ip.strip()))
+            
+    # Also check if user mentions "fraud", "scam", "verify", "link", "number", "check", "ip"
+    msg_lower = user_message.lower()
+    is_fraud_query = any(k in msg_lower for k in ["fraud", "scam", "verify", "phishing", "fake", "check link", "check number", "is this safe", "security"])
+    
+    if not found_entities and is_fraud_query:
+        for c in user_cases:
+            evidence_list = c.get("evidence", [])
+            for ev in evidence_list:
+                text = ev.get("extracted_text", "")
+                urls = _URL_RE.findall(text)
+                if urls:
+                    found_entities.append(("url", urls[0].strip()))
+                    break
+                phones = _PHONE_RE.findall(text)
+                if phones:
+                    clean_p = phones[0].strip().replace(" ", "").replace("-", "")
+                    if len(clean_p) >= 10:
+                        found_entities.append(("phone", clean_p))
+                        break
+            if found_entities:
+                break
+
+    if not found_entities:
+        return ""
+
+    results_formatted = []
+    for etype, val in found_entities[:2]:  # check up to 2 entities
+        try:
+            verdict = await verify_entity(etype, val, db)
+            badge = "🟢 SAFE" if verdict.verdict == "safe" else ("🟡 SUSPICIOUS" if verdict.verdict == "suspicious" else "🔴 MALICIOUS")
+            
+            details = [
+                f"### 🛡️ Fraud & Security Intelligence Report for `{val}`",
+                f"**Overall Verdict**: **{badge}** | **Risk Score: {verdict.risk_score}/100**",
+                "",
+                "| Threat Intelligence Source | Status / Finding | Severity Level |",
+                "| :--- | :--- | :--- |"
+            ]
+            
+            for ev in verdict.evidence:
+                sev_icon = "🟢" if ev.severity == "safe" else ("🟡" if ev.severity == "suspicious" else ("🔴" if ev.severity == "malicious" else "⚪"))
+                details.append(f"| **{ev.source}** | {sev_icon} {ev.finding} | `{ev.severity.upper()}` |")
+                
+            if verdict.phone_check and verdict.phone_check.available:
+                pc = verdict.phone_check
+                details.append(f"| **IPQualityScore Phone Validation** | Carrier: {pc.carrier or 'Unknown'} (VOIP: {pc.is_voip}, Disposable: {pc.is_disposable}) | Fraud Score: `{pc.risk_score}/100` |")
+                
+            if verdict.virus_total and verdict.virus_total.available:
+                vt = verdict.virus_total
+                details.append(f"| **VirusTotal Engine Consensus** | {vt.malicious_count}/{vt.total_engines} engines flagged as malicious | `MALICIOUS COUNT: {vt.malicious_count}` |")
+                
+            if verdict.domain_age and verdict.domain_age.available:
+                da = verdict.domain_age
+                details.append(f"| **WhoisXML Domain Age Check** | Domain Age: {da.age_days} days (Created: {da.created_date or 'N/A'}) | `{'NEW DOMAIN (RISK)' if da.is_new else 'ESTABLISHED'}` |")
+
+            if verdict.shared_intel and verdict.shared_intel.found:
+                details.append(f"| **SumScale Community Intel** | Reported by {verdict.shared_intel.report_count} users | `{'AUTO-FLAGGED' if verdict.shared_intel.auto_flagged else 'REPORTED'}` |")
+                
+            results_formatted.append("\n".join(details))
+        except Exception as exc:
+            logger.warning(f"Error verifying entity {val} in chat: {exc}")
+
+    return "\n\n---\n\n".join(results_formatted)
+
+
 async def generate_grounded_chat_response(
     user_message: str,
     user_cases: List[Dict[str, Any]],
     language: str = "en",
     chat_history: List[Dict[str, Any]] = None,
+    db: Any = None,
 ) -> Dict[str, Any]:
     """
     Format user cases and recent conversation history as RAG context.
+    Automatically performs live threat intelligence entity verification if URLs, phones, or fraud queries are detected.
     Automatically retries up to 3 times on 429 RESOURCE_EXHAUSTED errors.
     Returns {"answer": "...", "cited_cases": [...]} in user's target language.
     """
+    # 1. Run live threat verification if applicable
+    threat_intel_report = await _check_fraud_in_chat(user_message, user_cases, db)
+
     formatted_cases = []
     for c in user_cases:
         case_id = str(c.get("_id") or c.get("id"))
@@ -108,10 +214,14 @@ async def generate_grounded_chat_response(
     }
     lang_name = LANG_NAMES.get(language, "English")
 
+    threat_prompt_section = ""
+    if threat_intel_report:
+        threat_prompt_section = f"\n\nLIVE THREAT INTELLIGENCE VERIFICATION RESULTS:\n{threat_intel_report}\n\nIMPORTANT: Include the above Threat Intelligence Report table with risk scores, IPQualityScore, VirusTotal, and WhoisXML details prominently in your response so the user gets complete trust, transparency, and numerical risk scores."
+
     prompt = f"""{PROMPT_INJECTION_PROTECTION}
 
 Task: You are OmniAid Copilot, a warm, highly empathetic, and articulate human specialist assistant.
-Your goal is to answer the user's questions in a natural, compassionate, and human-like voice while grounding your guidance strictly in their uploaded case history and recent chat conversation history below.
+Your goal is to answer the user's questions in a natural, compassionate, and human-like voice while grounding your guidance strictly in their uploaded case history, threat verification data, and recent chat conversation history below.
 
 ================================================================================
 CRITICAL MULTILINGUAL MANDATE (STRICT COMPLIANCE REQUIRED):
@@ -132,7 +242,7 @@ CRITICAL TONE & STYLE INSTRUCTIONS (MUST FOLLOW):
 2. NO ROBOTIC AI TEMPLATES: Never use rigid robotic phrasing like "I have analyzed your query based on your case details..." or "Key recommendation:".
 3. NATURAL CONVERSATIONAL PROSE: Express insights in clear, natural paragraphs in {lang_name}.
 4. EMPATHETIC & REASSURING: Provide thoughtful, helpful guidance that feels personal and easy to understand.
-5. GROUNDED IN FACTS: Only use facts from the user case context and conversation history provided below.
+5. GROUNDED IN FACTS: Only use facts from the user case context, threat verification data, and conversation history provided below.{threat_prompt_section}
 
 <user_data>
 USER CASE HISTORY CONTEXT:
@@ -174,7 +284,7 @@ Return ONLY a valid JSON object matching this schema:
             result = clean_json_response(raw)
             answer_val = result.get("answer")
             if not answer_val or not str(answer_val).strip():
-                answer_val = _build_grounded_fallback_answer(user_message, user_cases)
+                answer_val = _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report)
 
             return {
                 "answer": answer_val,
@@ -204,7 +314,7 @@ Return ONLY a valid JSON object matching this schema:
                     # All retries exhausted — return a grounded answer based on case data
                     logger.warning("Rate-limit: all retries exhausted. Returning grounded local fallback.")
                     return {
-                        "answer": _build_grounded_fallback_answer(user_message, user_cases),
+                        "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
                         "cited_cases": [],
                         "suggested_next_questions": [
                             "What are the main risk factors in my document?",
@@ -215,7 +325,7 @@ Return ONLY a valid JSON object matching this schema:
             else:
                 logger.error(f"Error during RAG chat response generation: {exc}")
                 return {
-                    "answer": _build_grounded_fallback_answer(user_message, user_cases),
+                    "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
                     "cited_cases": [],
                     "suggested_next_questions": [
                         "What are the main risk factors in my document?",
@@ -226,7 +336,7 @@ Return ONLY a valid JSON object matching this schema:
 
     logger.error(f"Unexpected exit from retry loop: {last_exc}")
     return {
-        "answer": _build_grounded_fallback_answer(user_message, user_cases),
+        "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
         "cited_cases": [],
         "suggested_next_questions": [
             "What are the main risk factors in my document?",
