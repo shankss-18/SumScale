@@ -12,7 +12,7 @@ Security & Isolation Rules:
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import uuid4
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File
@@ -433,5 +433,34 @@ async def update_case_title(
     )
 
     updated_doc = await db.cases.find_one({"_id": case_id, "user_id": current_user.id})
+    return CaseInDB(**updated_doc)
+
+
+@router.post(
+    "/{case_id}/messages",
+    response_model=CaseInDB,
+    summary="Save chat history messages for a case",
+)
+async def save_case_chat_history(
+    request: Request,
+    case_id: str,
+    body: Dict[str, Any],
+    current_user: UserInDB = Depends(get_current_user),
+):
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection unavailable")
+
+    messages = body.get("messages", [])
+    now = datetime.now(timezone.utc)
+
+    await db.cases.update_one(
+        {"_id": case_id, "user_id": current_user.id},
+        {"$set": {"chat_history": messages, "updated_at": now}}
+    )
+
+    updated_doc = await db.cases.find_one({"_id": case_id, "user_id": current_user.id})
+    if not updated_doc:
+        raise HTTPException(status_code=404, detail="Case not found")
     return CaseInDB(**updated_doc)
 

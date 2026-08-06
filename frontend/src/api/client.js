@@ -102,6 +102,9 @@ export const apiDeleteCase = (caseId) =>
 export const apiUpdateCaseTitle = (caseId, title) =>
   apiClient.patch(`/cases/${caseId}/title`, { title });
 
+export const apiSaveCaseChatHistory = (caseId, messages) =>
+  apiClient.post(`/cases/${caseId}/messages`, { messages });
+
 
 export const getFileDownloadUrl = (caseId, fileId) =>
   `${API_BASE_URL}/cases/${caseId}/files/${fileId}`;

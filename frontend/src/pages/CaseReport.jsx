@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
-import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle } from '../api/client';
+import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const CaseReport = () => {
@@ -185,15 +185,27 @@ const CaseReport = () => {
 
     setCaseData(data);
 
-    // Load persistent chat history from localStorage or initialize with AI Analysis Summary
+    // 1. Priority check: DB chat_history returned from API backend
+    if (Array.isArray(data.chat_history) && data.chat_history.length > 0) {
+      setMessages(data.chat_history);
+      localStorage.setItem(`sumscale_case_chat_${caseId}`, JSON.stringify(data.chat_history));
+      setLoading(false);
+      return;
+    }
+
+    // 2. Secondary check: localStorage persistent chat history
     const storageKey = `sumscale_case_chat_${caseId}`;
-    const savedChat = localStorage.getItem(storageKey);
+    const altStorageKey = `sumscale_case_chat_${data._id || data.id}`;
+    const savedChat = localStorage.getItem(storageKey) || localStorage.getItem(altStorageKey);
 
     if (savedChat) {
       try {
         const parsed = JSON.parse(savedChat);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
+          // Sync existing localStorage messages to MongoDB
+          const targetId = data._id || data.id || caseId;
+          apiSaveCaseChatHistory(targetId, parsed).catch(() => {});
           setLoading(false);
           return;
         }
@@ -223,6 +235,8 @@ const CaseReport = () => {
     const initialMsgs = [{ sender: 'ai', text: welcomeText, timestamp: new Date().toISOString() }];
     setMessages(initialMsgs);
     localStorage.setItem(storageKey, JSON.stringify(initialMsgs));
+    const targetId = data._id || data.id || caseId;
+    apiSaveCaseChatHistory(targetId, initialMsgs).catch(() => {});
     setLoading(false);
   };
 
@@ -230,10 +244,14 @@ const CaseReport = () => {
     fetchCase();
   }, [caseId]);
 
-  // Save messages to localStorage whenever messages change
+  // Save messages to both localStorage and MongoDB database
   const updateMessages = (newMsgs) => {
     setMessages(newMsgs);
     localStorage.setItem(`sumscale_case_chat_${caseId}`, JSON.stringify(newMsgs));
+    const targetId = caseData?._id || caseData?.id || caseId;
+    if (targetId) {
+      apiSaveCaseChatHistory(targetId, newMsgs).catch((e) => console.warn('Failed to sync chat history to DB:', e));
+    }
   };
 
   // Handle file selection inside chat bar

@@ -52,6 +52,7 @@ class CaseInDB(BaseModel):
     clarifying_qa: List[ClarifyingQA] = Field(default_factory=list)
     findings: Dict[str, Any] = Field(default_factory=dict)
     reminder: Optional[ReminderAction] = None
+    chat_history: List[Dict[str, Any]] = Field(default_factory=list)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
