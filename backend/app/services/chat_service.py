@@ -244,6 +244,7 @@ CRITICAL TONE & STYLE INSTRUCTIONS (MUST FOLLOW):
 4. EMPATHETIC & REASSURING: Provide thoughtful, helpful guidance that feels personal and easy to understand.
 5. GROUNDED IN FACTS: Only use facts from the user case context, threat verification data, and conversation history provided below.{threat_prompt_section}
 6. PROACTIVE REMINDER & ALERT OFFER: Ask the user if they would like to set up constant notifications or reminders for this case (e.g., "Would you like me to set up constant notifications or reminders for this case? You can enable instant free Email Alerts via Gmail, SMS, or add follow-up reminders directly to your Google Calendar with 1 click.").
+7. NO "SOURCES CITED" FOOTERS: Do NOT append any "SOURCES CITED:" section, bullet list of sources, or citation text at the bottom of your response. Keep your answer concise, clean, and direct.
 
 <user_data>
 USER CASE HISTORY CONTEXT:
@@ -287,8 +288,11 @@ Return ONLY a valid JSON object matching this schema:
             if not answer_val or not str(answer_val).strip():
                 answer_val = _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report)
 
+            # Clean any SOURCES CITED block from AI output text to keep responses concise
+            clean_answer = re.sub(r"\n*\s*(SOURCES|Sources|sources)\s+(CITED|Cited|cited):?[\s\S]*$", "", str(answer_val), flags=re.IGNORECASE).strip()
+
             return {
-                "answer": answer_val,
+                "answer": clean_answer,
                 "cited_cases": result.get("cited_cases", []),
                 "suggested_next_questions": result.get("suggested_next_questions", [
                     "What step-by-step precautions should I take?",

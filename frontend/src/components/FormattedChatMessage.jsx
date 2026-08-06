@@ -3,7 +3,11 @@ import React from 'react';
 export default function FormattedChatMessage({ text }) {
   if (!text) return null;
 
-  const lines = text.split('\n');
+  // Strip any "SOURCES CITED:" or "Sources Cited:" block from response to keep answers clean and concise
+  const cleanedText = text.replace(/\n*\s*(SOURCES|Sources|sources)\s+(CITED|Cited|cited):?[\s\S]*$/i, '').trim();
+  if (!cleanedText) return null;
+
+  const lines = cleanedText.split('\n');
   const elements = [];
   let inTable = false;
   let tableHeader = null;
