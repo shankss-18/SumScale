@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 
+/**
+ * Hero3DCanvas — Premium 3D Interactive Background
+ * - Dual-layer system: deep aurora field + foreground neural constellation
+ * - Flowing data streams connecting orbiting nodes
+ * - Mouse parallax tilt + cursor repulsion field
+ * - Self-contained, zero dependencies
+ */
 export default function Hero3DCanvas() {
   const canvasRef = useRef(null);
 
@@ -7,196 +14,333 @@ export default function Hero3DCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    let raf;
 
-    let animationFrameId;
-    let width = (canvas.width = canvas.parentElement.clientWidth || window.innerWidth);
-    let height = (canvas.height = canvas.parentElement.clientHeight || 550);
+    const resize = () => {
+      canvas.width  = canvas.parentElement?.clientWidth  || window.innerWidth;
+      canvas.height = canvas.parentElement?.clientHeight || window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
 
-    const handleResize = () => {
-      if (!canvas || !canvas.parentElement) return;
-      width = canvas.width = canvas.parentElement.clientWidth;
-      height = canvas.height = canvas.parentElement.clientHeight || 550;
+    // ── Mouse state ────────────────────────────────────────────────
+    let mx = 0, my = 0;
+    let rotX = 0, rotY = 0;
+    let tRotX = 0, tRotY = 0;
+    const onMove = (e) => {
+      const r = canvas.getBoundingClientRect();
+      mx = e.clientX - r.left;
+      my = e.clientY - r.top;
+      tRotY =  ((mx - canvas.width  / 2) / canvas.width)  * 1.4;
+      tRotX = -((my - canvas.height / 2) / canvas.height) * 1.0;
+    };
+    window.addEventListener('mousemove', onMove);
+
+    // ── Colour palette ─────────────────────────────────────────────
+    const C = {
+      deep:    '#006D77',
+      mid:     '#83C5BE',
+      light:   '#EDF6F9',
+      accent:  '#52B788',
     };
 
-    window.addEventListener('resize', handleResize);
-
-    // 3D Particle Cloud settings
-    const PARTICLE_COUNT = Math.min(100, Math.floor(width / 10));
-    const particles = [];
-    const radius = Math.min(width, height) * 0.38;
-
-    // Mouse tracking for 3D tilt
-    let mouseX = 0;
-    let mouseY = 0;
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-    let rotationX = 0;
-    let rotationY = 0;
-
-    const handleMouseMove = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left - width / 2;
-      const y = e.clientY - rect.top - height / 2;
-      mouseX = x;
-      mouseY = y;
-      targetRotationY = (x / width) * 1.2;
-      targetRotationX = -(y / height) * 1.2;
+    // ── Helper: project 3-D point to 2-D screen ────────────────────
+    const FOV = 480;
+    const project = (x, y, z, cx, cy) => {
+      const s = FOV / (FOV + z + 350);
+      return { sx: cx + x * s, sy: cy + y * s, scale: s };
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 1: Deep aurora wave-field (large slow blobs)
+    // ═══════════════════════════════════════════════════════════════
+    const blobs = Array.from({ length: 6 }, (_, i) => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 0.28 + Math.random() * 0.22,
+      dx: (Math.random() - 0.5) * 0.00025,
+      dy: (Math.random() - 0.5) * 0.00015,
+      hue: [186, 172, 155, 145, 195, 165][i],
+    }));
 
-    // Generate 3D sphere particles (Fibonacci lattice)
-    const phi = Math.PI * (3 - Math.sqrt(5)); // Golden ratio angle
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const y = 1 - (i / (PARTICLE_COUNT - 1)) * 2; // y goes from 1 to -1
-      const radiusAtY = Math.sqrt(1 - y * y); // Radius at y
-      const theta = phi * i;
-
-      const x = Math.cos(theta) * radiusAtY;
-      const z = Math.sin(theta) * radiusAtY;
-
-      particles.push({
-        baseX: x * radius,
-        baseY: y * radius,
-        baseZ: z * radius,
-        x: x * radius,
-        y: y * radius,
-        z: z * radius,
-        size: Math.random() * 2 + 1.5,
-        pulse: Math.random() * Math.PI * 2,
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 2: 3-D Particle Sphere — Fibonacci lattice
+    // ═══════════════════════════════════════════════════════════════
+    const N = 90;
+    const R = () => Math.min(canvas.width, canvas.height) * 0.34;
+    const PHI = Math.PI * (3 - Math.sqrt(5));
+    let pts = [];
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2;
+      const ry = Math.sqrt(Math.max(0, 1 - y * y));
+      const theta = PHI * i;
+      pts.push({
+        bx: Math.cos(theta) * ry,
+        by: y,
+        bz: Math.sin(theta) * ry,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.018 + Math.random() * 0.02,
+        size:  1.4 + Math.random() * 1.6,
       });
     }
 
-    let angleY = 0;
-    let angleX = 0;
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 3: Orbiting data-stream rings (3 rings)
+    // ═══════════════════════════════════════════════════════════════
+    const RINGS = [
+      { axis: [1, 0.3, 0],  r: 0.62, speed: 0.006, particles: 22, phase: 0,           col: C.deep  },
+      { axis: [0.2, 1, 0.5],r: 0.82, speed: -0.004, particles: 18, phase: Math.PI/3,  col: C.mid   },
+      { axis: [0.5, 0.2, 1],r: 0.72, speed: 0.005,  particles: 16, phase: Math.PI*0.8,col: C.accent},
+    ];
+    const ringPts = RINGS.map(ring =>
+      Array.from({ length: ring.particles }, (_, i) => ({
+        angle: ring.phase + (i / ring.particles) * Math.PI * 2,
+        size: 1.2 + Math.random() * 1.8,
+        phase: Math.random() * Math.PI * 2,
+      }))
+    );
 
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
+    // Normalise an axis vector
+    const norm = ([x, y, z]) => {
+      const m = Math.sqrt(x*x + y*y + z*z);
+      return [x/m, y/m, z/m];
+    };
 
-      // Smooth mouse interpolation
-      rotationX += (targetRotationX - rotationX) * 0.05;
-      rotationY += (targetRotationY - rotationY) * 0.05;
+    // Rotate point p around normalised axis n by angle θ (Rodrigues)
+    const rodrigues = ([px, py, pz], [nx, ny, nz], theta) => {
+      const cos = Math.cos(theta), sin = Math.sin(theta);
+      const dot = px*nx + py*ny + pz*nz;
+      return [
+        px*cos + (ny*pz - nz*py)*sin + nx*dot*(1-cos),
+        py*cos + (nz*px - nx*pz)*sin + ny*dot*(1-cos),
+        pz*cos + (nx*py - ny*px)*sin + nz*dot*(1-cos),
+      ];
+    };
 
-      angleY += 0.003 + rotationY * 0.01;
-      angleX += 0.001 + rotationX * 0.01;
+    // ── Y-axis rotation matrix ──────────────────────────────────────
+    let globalAngleY = 0;
+    let globalAngleX = 0;
 
-      const cosY = Math.cos(angleY);
-      const sinY = Math.sin(angleY);
-      const cosX = Math.cos(angleX);
-      const sinX = Math.sin(angleX);
+    const rotateY = ([x, y, z], a) => [
+      x * Math.cos(a) - z * Math.sin(a),
+      y,
+      z * Math.cos(a) + x * Math.sin(a),
+    ];
+    const rotateX = ([x, y, z], a) => [
+      x,
+      y * Math.cos(a) - z * Math.sin(a),
+      z * Math.cos(a) + y * Math.sin(a),
+    ];
 
-      const fov = 400; // 3D Perspective field of view
-      const centerX = width / 2;
-      const centerY = height / 2;
+    let t = 0;
 
-      const projectedParticles = [];
+    // ── Draw aurora layer ───────────────────────────────────────────
+    const drawAurora = () => {
+      const w = canvas.width, h = canvas.height;
+      blobs.forEach(b => {
+        b.x += b.dx; b.y += b.dy;
+        if (b.x < 0 || b.x > 1) b.dx *= -1;
+        if (b.y < 0 || b.y > 1) b.dy *= -1;
 
-      // Rotate and project 3D points to 2D screen coordinates
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        p.pulse += 0.03;
-
-        // 3D Y Rotation
-        let x1 = p.baseX * cosY - p.baseZ * sinY;
-        let z1 = p.baseZ * cosY + p.baseX * sinY;
-
-        // 3D X Rotation
-        let y1 = p.baseY * cosX - z1 * sinX;
-        let z2 = z1 * cosX + p.baseY * sinX;
-
-        // Interactive mouse magnetic push
-        const dx = x1 - mouseX;
-        const dy = y1 - mouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
-          const force = (120 - dist) / 120;
-          x1 += (dx / (dist || 1)) * force * 15;
-          y1 += (dy / (dist || 1)) * force * 15;
-        }
-
-        // Perspective scale
-        const scale = fov / (fov + z2 + 300);
-        const screenX = centerX + x1 * scale;
-        const screenY = centerY + y1 * scale;
-
-        projectedParticles.push({
-          x: screenX,
-          y: screenY,
-          z: z2,
-          scale,
-          pulse: p.pulse,
-          size: p.size * scale,
-        });
-      }
-
-      // Draw interconnecting 3D neural network lines
-      ctx.lineWidth = 0.8;
-      for (let i = 0; i < projectedParticles.length; i++) {
-        const p1 = projectedParticles[i];
-        for (let j = i + 1; j < projectedParticles.length; j++) {
-          const p2 = projectedParticles[j];
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          // Connect if close on 2D screen and similar 3D depth
-          if (distance < 90) {
-            const alpha = (1 - distance / 90) * 0.25 * Math.min(p1.scale, p2.scale);
-            ctx.strokeStyle = `rgba(0, 109, 119, ${alpha})`;
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Sort particles by Z for proper depth rendering
-      projectedParticles.sort((a, b) => b.z - a.z);
-
-      // Render 3D glowing nodes
-      for (let i = 0; i < projectedParticles.length; i++) {
-        const p = projectedParticles[i];
-        const alpha = Math.max(0.1, Math.min(0.95, (p.z + radius) / (radius * 2)));
-        const pulsedSize = p.size + Math.sin(p.pulse) * 0.6;
-
-        // Outer glow
-        const gradient = ctx.createRadialGradient(
-          p.x, p.y, 0,
-          p.x, p.y, pulsedSize * 3
+        const grd = ctx.createRadialGradient(
+          b.x * w, b.y * h, 0,
+          b.x * w, b.y * h, b.r * Math.max(w, h)
         );
-        gradient.addColorStop(0, `rgba(131, 197, 190, ${alpha})`);
-        gradient.addColorStop(0.5, `rgba(0, 109, 119, ${alpha * 0.4})`);
-        gradient.addColorStop(1, 'rgba(0, 109, 119, 0)');
+        grd.addColorStop(0, `hsla(${b.hue},55%,52%,0.13)`);
+        grd.addColorStop(0.5, `hsla(${b.hue},45%,60%,0.06)`);
+        grd.addColorStop(1, 'transparent');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+      });
+    };
 
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, pulsedSize * 3, 0, Math.PI * 2);
-        ctx.fill();
+    // ── Main render loop ────────────────────────────────────────────
+    const render = () => {
+      t += 0.012;
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const radius = R();
 
-        // Inner solid core node
-        ctx.fillStyle = `rgba(0, 109, 119, ${alpha * 0.9})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, pulsedSize, 0, Math.PI * 2);
-        ctx.fill();
+      ctx.clearRect(0, 0, w, h);
+
+      // Smooth mouse tracking
+      rotX += (tRotX - rotX) * 0.04;
+      rotY += (tRotY - rotY) * 0.04;
+      globalAngleY += 0.004 + rotY * 0.008;
+      globalAngleX += 0.0008 + rotX * 0.005;
+
+      // ── Aurora background ─────────────────────────────────────────
+      drawAurora();
+
+      // ── Rotating scan-line effect (horizontal aurora sweep) ────────
+      const scanGrd = ctx.createLinearGradient(0, 0, 0, h);
+      const scanY = ((Math.sin(t * 0.4) + 1) / 2) * h;
+      scanGrd.addColorStop(Math.max(0, (scanY - 80) / h), 'transparent');
+      scanGrd.addColorStop(scanY / h,  'rgba(131,197,190,0.05)');
+      scanGrd.addColorStop(Math.min(1, (scanY + 80) / h), 'transparent');
+      ctx.fillStyle = scanGrd;
+      ctx.fillRect(0, 0, w, h);
+
+      // ══════════════════════════════════════════════════════════════
+      // Project sphere particles
+      // ══════════════════════════════════════════════════════════════
+      const projected = pts.map(p => {
+        p.phase += p.speed * 0.18;
+        let [x, y, z] = [p.bx * radius, p.by * radius, p.bz * radius];
+
+        // Apply global rotation
+        ;[x, y, z] = rotateY([x, y, z], globalAngleY);
+        ;[x, y, z] = rotateX([x, y, z], globalAngleX);
+
+        // Mouse repulsion
+        const dx = x - (mx - cx), dy = y - (my - cy);
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 100) {
+          const f = (100 - d) / 100;
+          x += (dx / (d || 1)) * f * 18;
+          y += (dy / (d || 1)) * f * 18;
+        }
+
+        const { sx, sy, scale } = project(x, y, z, cx, cy);
+        return { sx, sy, z, scale, phase: p.phase, size: p.size * scale };
+      });
+
+      // ── Draw neural web lines (depth-attenuated) ──────────────────
+      for (let i = 0; i < projected.length; i++) {
+        for (let j = i + 1; j < projected.length; j++) {
+          const a = projected[i], b = projected[j];
+          const dx = a.sx - b.sx, dy = a.sy - b.sy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 70) continue;
+
+          const alpha = (1 - dist / 70) * 0.18 * Math.min(a.scale, b.scale) * 1.8;
+          ctx.strokeStyle = `rgba(0,109,119,${alpha})`;
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(a.sx, a.sy);
+          ctx.lineTo(b.sx, b.sy);
+          ctx.stroke();
+        }
       }
 
-      animationFrameId = requestAnimationFrame(render);
+      // ── Draw sphere particles (depth sorted) ──────────────────────
+      projected.sort((a, b) => a.z - b.z);
+      projected.forEach(p => {
+        const alpha = Math.max(0.08, (p.z / radius + 1) / 2);
+        const pulse = p.size + Math.sin(p.phase) * 0.7;
+
+        // Outer halo
+        const g = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, pulse * 4);
+        g.addColorStop(0, `rgba(131,197,190,${alpha * 0.8})`);
+        g.addColorStop(0.4, `rgba(0,109,119,${alpha * 0.3})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, pulse * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Solid core
+        ctx.fillStyle = `rgba(0,109,119,${alpha * 0.95})`;
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, pulse * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // ══════════════════════════════════════════════════════════════
+      // Draw orbiting data-stream rings
+      // ══════════════════════════════════════════════════════════════
+      RINGS.forEach((ring, ri) => {
+        const axis = norm(ring.axis);
+        const perp1 = norm([-axis[1], axis[0], 0].map(v => v || 0.001));
+        const perp2 = [
+          axis[1] * perp1[2] - axis[2] * perp1[1],
+          axis[2] * perp1[0] - axis[0] * perp1[2],
+          axis[0] * perp1[1] - axis[1] * perp1[0],
+        ];
+
+        const rpts = ringPts[ri];
+        rpts.forEach(rp => {
+          rp.angle += ring.speed;
+          rp.phase += 0.03;
+        });
+
+        const ringRadius = radius * ring.r;
+
+        // Draw ring path as faded line
+        const ringProj = rpts.map(rp => {
+          let px = (Math.cos(rp.angle) * perp1[0] + Math.sin(rp.angle) * perp2[0]) * ringRadius;
+          let py = (Math.cos(rp.angle) * perp1[1] + Math.sin(rp.angle) * perp2[1]) * ringRadius;
+          let pz = (Math.cos(rp.angle) * perp1[2] + Math.sin(rp.angle) * perp2[2]) * ringRadius;
+
+          ;[px, py, pz] = rotateY([px, py, pz], globalAngleY);
+          ;[px, py, pz] = rotateX([px, py, pz], globalAngleX);
+
+          const { sx, sy, scale } = project(px, py, pz, cx, cy);
+          const depthAlpha = Math.max(0.05, (pz / radius + 1) / 2);
+          return { sx, sy, scale, depthAlpha, pz, rp };
+        });
+
+        // Connect ring points as fading arcs
+        for (let i = 0; i < ringProj.length; i++) {
+          const a = ringProj[i];
+          const b = ringProj[(i + 1) % ringProj.length];
+          const alpha = 0.12 * a.depthAlpha;
+          const hex = ring.col;
+          ctx.strokeStyle = alpha > 0.01
+            ? `rgba(${ri === 0 ? '0,109,119' : ri === 1 ? '131,197,190' : '82,183,136'},${alpha})`
+            : 'transparent';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(a.sx, a.sy);
+          ctx.lineTo(b.sx, b.sy);
+          ctx.stroke();
+        }
+
+        // Ring node glows
+        ringProj.forEach(({ sx, sy, scale, depthAlpha, rp }) => {
+          const pulse = rp.size * scale + Math.sin(rp.phase) * 0.5 * scale;
+          const alpha = depthAlpha * 0.85;
+          const rgb = ri === 0 ? '0,109,119' : ri === 1 ? '131,197,190' : '82,183,136';
+
+          const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, pulse * 3.5);
+          g.addColorStop(0,   `rgba(${rgb},${alpha})`);
+          g.addColorStop(0.5, `rgba(${rgb},${alpha * 0.3})`);
+          g.addColorStop(1, 'transparent');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(sx, sy, pulse * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(${rgb},${alpha * 0.9})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, pulse, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+
+      // ── Vignette to blend into page bg ───────────────────────────
+      const vigGrd = ctx.createRadialGradient(cx, cy, radius * 0.6, cx, cy, radius * 1.6);
+      vigGrd.addColorStop(0, 'transparent');
+      vigGrd.addColorStop(1, 'rgba(237,246,249,0.55)');
+      ctx.fillStyle = vigGrd;
+      ctx.fillRect(0, 0, w, h);
+
+      raf = requestAnimationFrame(render);
     };
 
     render();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMove);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-auto opacity-70 transition-opacity duration-700"
+      className="absolute inset-0 w-full h-full pointer-events-auto"
       style={{ zIndex: 0 }}
     />
   );
