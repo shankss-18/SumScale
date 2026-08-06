@@ -40,7 +40,6 @@ class Settings(BaseSettings):
     # -----------------------------------------------------------------------
     GOOGLE_SAFE_BROWSING_KEY: str = Field(default="", description="Google Safe Browsing API v4 key (optional)")
     VIRUSTOTAL_API_KEY: str = Field(default="", description="VirusTotal API v3 key (optional)")
-    WHOISXML_API_KEY: str = Field(default="", description="WhoisXML API key for domain age (optional)")
     IPQUALITYSCORE_API_KEY: str = Field(default="", description="IPQualityScore API key for phone checks (optional)")
 
     # -----------------------------------------------------------------------

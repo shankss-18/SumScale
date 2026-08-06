@@ -174,51 +174,7 @@ async def check_virustotal(value: str) -> VirusTotalResult:
 # ---------------------------------------------------------------------------
 
 async def check_domain_age(domain: str) -> DomainAgeResult:
-    key = settings.WHOISXML_API_KEY
-    if not key:
-        logger.warning("WHOISXML_API_KEY not set — skipping domain age check")
-        return DomainAgeResult(available=False)
-
-    try:
-        async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-            resp = await client.get(
-                "https://www.whoisxmlapi.com/whoisserver/WhoisService",
-                params={
-                    "apiKey": key,
-                    "domainName": domain,
-                    "outputFormat": "JSON",
-                },
-            )
-        if resp.status_code == 200:
-            data = resp.json()
-            record = data.get("WhoisRecord", {})
-            registry_data = record.get("registryData", {})
-            created_raw = (
-                registry_data.get("createdDate")
-                or record.get("createdDate")
-                or ""
-            )
-            if created_raw:
-                try:
-                    # WhoisXML returns dates like "2010-01-15T00:00:00Z"
-                    created_dt = datetime.fromisoformat(
-                        created_raw.replace("Z", "+00:00")
-                    )
-                    age_days = (datetime.now(timezone.utc) - created_dt).days
-                    return DomainAgeResult(
-                        created_date=created_raw[:10],
-                        age_days=age_days,
-                        is_new=age_days < 30,
-                    )
-                except Exception:
-                    pass
-            return DomainAgeResult(available=True)
-        else:
-            logger.warning(f"WhoisXML API error {resp.status_code}")
-            return DomainAgeResult(available=False)
-    except Exception as exc:
-        logger.warning(f"check_domain_age failed: {exc}")
-        return DomainAgeResult(available=False)
+    return DomainAgeResult(available=False)
 
 
 # ---------------------------------------------------------------------------
@@ -274,17 +230,8 @@ def _compute_risk_score(
         score += 60   # definitive Google hit → very high
 
     if vt.available and vt.malicious_count > 0:
-        # scale by fraction of engines flagging it
         frac = min(vt.malicious_count / max(vt.total_engines, 1), 1.0)
         score += int(40 * frac)
-
-    if da.available and da.age_days is not None:
-        if da.age_days < 7:
-            score += 30
-        elif da.age_days < 30:
-            score += 15
-        elif da.age_days < 90:
-            score += 5
 
     if ph.available and entity_type == "phone":
         if ph.is_voip or ph.is_disposable:
@@ -298,8 +245,6 @@ def _derive_verdict(score: int, sb: SafeBrowsingResult, vt: VirusTotalResult, da
     if sb.available and sb.malicious:
         return "malicious"
     if vt.available and vt.malicious_count > 3:
-        return "malicious"
-    if da.available and da.age_days is not None and da.age_days < 7:
         return "malicious"
     if score >= 60:
         return "malicious"
@@ -330,12 +275,6 @@ def _build_evidence(
                 finding="No threats found",
                 severity="safe",
             ))
-    else:
-        items.append(EvidenceItem(
-            source="Google Safe Browsing",
-            finding="API key not configured",
-            severity="unknown",
-        ))
 
     if vt.available:
         if vt.malicious_count > 0:
@@ -351,48 +290,22 @@ def _build_evidence(
                 finding=f"0/{vt.total_engines} engines flagged — clean",
                 severity="safe",
             ))
-    else:
+
+    if entity_type == "phone" and ph.available:
+        severity = "suspicious" if (ph.is_voip or ph.is_disposable) else "safe"
+        finding_parts = []
+        if ph.is_voip:
+            finding_parts.append("VOIP number")
+        if ph.is_disposable:
+            finding_parts.append("disposable number")
+        if ph.carrier:
+            finding_parts.append(f"carrier: {ph.carrier}")
+        finding_parts.append(f"risk score: {ph.risk_score}/100")
         items.append(EvidenceItem(
-            source="VirusTotal",
-            finding="API key not configured",
-            severity="unknown",
+            source="IPQualityScore",
+            finding=", ".join(finding_parts) or "No issues found",
+            severity=severity,
         ))
-
-    if entity_type in ("url", "domain", "ip") and da.available:
-        if da.age_days is not None:
-            severity = "malicious" if da.age_days < 7 else ("suspicious" if da.age_days < 30 else "safe")
-            items.append(EvidenceItem(
-                source="WhoisXML",
-                finding=f"Domain registered {da.age_days} days ago ({da.created_date or 'unknown date'})",
-                severity=severity,
-            ))
-        else:
-            items.append(EvidenceItem(
-                source="WhoisXML",
-                finding="Could not determine domain age",
-                severity="unknown",
-            ))
-    elif entity_type in ("url", "domain", "ip"):
-        items.append(EvidenceItem(source="WhoisXML", finding="API key not configured", severity="unknown"))
-
-    if entity_type == "phone":
-        if ph.available:
-            severity = "suspicious" if (ph.is_voip or ph.is_disposable) else "safe"
-            finding_parts = []
-            if ph.is_voip:
-                finding_parts.append("VOIP number")
-            if ph.is_disposable:
-                finding_parts.append("disposable number")
-            if ph.carrier:
-                finding_parts.append(f"carrier: {ph.carrier}")
-            finding_parts.append(f"risk score: {ph.risk_score}/100")
-            items.append(EvidenceItem(
-                source="IPQualityScore",
-                finding=", ".join(finding_parts) or "No issues found",
-                severity=severity,
-            ))
-        else:
-            items.append(EvidenceItem(source="IPQualityScore", finding="API key not configured", severity="unknown"))
 
     return items
 
