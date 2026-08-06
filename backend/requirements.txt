@@ -1,21 +1,16 @@
 # =============================================================================
-# OmniAid Backend — Python Dependencies (pinned)
+# SumScale Backend — Python Dependencies
 # =============================================================================
-# Install: pip install -r requirements.txt
-# On Windows, replace python-magic with python-magic-bin (see README)
-# =============================================================================
-
-# --- Web framework & AI SDK ---
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 google-genai==1.2.0
 
-# --- Validation & settings ---
+# --- Validation & Settings ---
 pydantic==2.10.3
 pydantic-settings==2.7.1
 email-validator==2.2.0
 
-# --- Database & background scheduling ---
+# --- Database & Scheduling ---
 motor==3.6.0
 apscheduler==3.10.4
 
@@ -23,20 +18,15 @@ apscheduler==3.10.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
-# --- File uploads & type detection ---
+# --- File Uploads & Magic Detection ---
 python-multipart==0.0.20
-python-magic-bin==0.4.14
+python-magic>=0.4.27; sys_platform != 'win32'
+python-magic-bin>=0.4.14; sys_platform == 'win32'
 
-# --- Rate limiting ---
+# --- Rate Limiting & Environment ---
 slowapi==0.1.9
-
-# --- Environment ---
 python-dotenv==1.0.1
-
-# --- Logging (JSON formatter) ---
 python-json-logger==3.2.1
-
-# --- HTTP client (for external APIs) ---
 httpx==0.28.1
 
 # --- Testing ---
