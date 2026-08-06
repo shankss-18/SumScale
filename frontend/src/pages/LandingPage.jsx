@@ -95,25 +95,27 @@ const LandingPage = () => {
           opacity: 0;
           transform: translateY(40px) scale(0.97);
           transition:
-            opacity   0.68s cubic-bezier(0.22,1,0.36,1),
-            transform 0.68s cubic-bezier(0.22,1,0.36,1),
-            box-shadow 0.32s ease;
+            opacity   0.4s ease-out,
+            transform 0.15s ease-out,
+            box-shadow 0.15s ease-out;
         }
         .cap-card.revealed {
           opacity: 1;
           transform: translateY(0) scale(1);
+          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
         }
         .cap-card:hover {
-          transform: translateY(-7px) scale(1.012) !important;
-          box-shadow: 0 20px 48px -8px rgba(0,109,119,0.18);
+          transform: translateY(-8px) scale(1.015) !important;
+          box-shadow: 0 20px 48px -8px rgba(0,109,119,0.22);
+          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
         }
 
         /* ── Capability cards hover lift ── */
         .capability-card {
-          transition: transform 0.32s cubic-bezier(0.22,1,0.36,1),
-                      box-shadow 0.32s ease;
+          transition: transform 0.15s ease-out,
+                      box-shadow 0.15s ease-out;
         }
-        .capability-card:hover { transform: translateY(-6px); }
+        .capability-card:hover { transform: translateY(-8px); }
 
         /* ── Stat counter pulse ── */
         @keyframes stat-pop {
@@ -302,7 +304,7 @@ const LandingPage = () => {
                            overflow-hidden shadow-sm"
                 style={{ borderRadius: '2.5rem 1.5rem 2.5rem 1.5rem' }}>
             <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full pointer-events-none
-                            transition-transform duration-500 group-hover:scale-125"
+                            transition-transform duration-150 group-hover:scale-125"
                  style={{ background: 'rgba(131,197,190,0.18)' }} />
             <div className="relative z-10 space-y-5">
               <div className="flex flex-wrap gap-2">
@@ -348,7 +350,7 @@ const LandingPage = () => {
                            overflow-hidden shadow-xl"
                 style={{ borderRadius: '1.5rem 2.5rem 1.5rem 2.5rem' }}>
             <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full pointer-events-none
-                            opacity-20 transition-transform duration-500 group-hover:scale-125"
+                            opacity-20 transition-transform duration-150 group-hover:scale-125"
                  style={{ background: '#83C5BE' }} />
             <div className="relative z-10 space-y-5">
               <div className="flex flex-wrap gap-2">
@@ -393,7 +395,7 @@ const LandingPage = () => {
                            overflow-hidden shadow-sm"
                 style={{ borderRadius: '2.5rem 1.5rem 2.5rem 1.5rem' }}>
             <div className="absolute -top-6 -left-6 w-32 h-32 rounded-full pointer-events-none
-                            transition-transform duration-500 group-hover:scale-125"
+                            transition-transform duration-150 group-hover:scale-125"
                  style={{ background: 'rgba(131,197,190,0.18)' }} />
             <div className="relative z-10 space-y-5">
               <div className="flex flex-wrap gap-2">
