@@ -82,9 +82,14 @@ def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
     if client is None:
         raise RuntimeError("Groq client not available")
 
+    # Groq API requires the word 'json' in prompt when response_format is json_object
+    prompt_content = prompt
+    if "json" not in prompt_content.lower():
+        prompt_content = prompt_content + "\n\nRespond strictly in valid JSON format."
+
     response = client.chat.completions.create(
         model=GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": prompt_content}],
         temperature=temperature,
         response_format={"type": "json_object"},
         max_tokens=4096,
@@ -112,12 +117,16 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
 
 def call_text_llm(prompt: str, temperature: float = 0.3) -> str:
     """
-    Unified text LLM caller — uses Groq if configured, otherwise Gemini.
+    Unified text LLM caller — uses Groq if configured, with automatic fallback to Gemini.
     Returns raw response string (JSON text).
     """
     if _use_groq:
-        logger.debug(f"Routing to Groq ({GROQ_MODEL})")
-        return _call_groq_text(prompt, temperature)
+        try:
+            logger.debug(f"Routing to Groq ({GROQ_MODEL})")
+            return _call_groq_text(prompt, temperature)
+        except Exception as e:
+            logger.warning(f"Groq call failed ({e}), falling back to Gemini text model ({GEMINI_TEXT_MODEL})...")
+            return _call_gemini_text(prompt, temperature)
     else:
         logger.debug(f"Routing to Gemini ({GEMINI_TEXT_MODEL})")
         return _call_gemini_text(prompt, temperature)

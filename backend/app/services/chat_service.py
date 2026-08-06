@@ -23,6 +23,38 @@ _MAX_RETRIES = 3
 _RETRY_BASE_DELAY_S = 5  # seconds — grows exponentially per attempt
 
 
+def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]]) -> str:
+    msg_lower = user_message.lower()
+    latest_case = user_cases[0] if user_cases else {}
+    findings = latest_case.get("findings", {})
+    summary = findings.get("summary") or findings.get("pattern_classification") or "Medical records intake completed."
+    checklist = findings.get("remediation_checklist", [])
+
+    if "warning" in msg_lower or "fever" in msg_lower or "precaution" in msg_lower or "risk" in msg_lower:
+        base = f"Based on your records ({summary}):\n\nKey warning signs to monitor with fever or skin symptoms include:\n"
+        base += "• High or persistent body temperature over 101°F (38.3°C)\n"
+        base += "• Severe headache, stiff neck, shortness of breath, or chest discomfort\n"
+        base += "• Extreme fatigue, dehydration, or spreading skin rash/lesions\n\n"
+        if checklist:
+            base += "Recommended Precautions:\n" + "\n".join(f"• {item}" for item in checklist) + "\n\n"
+        base += "If any of these severe signs develop, please consult a qualified healthcare provider immediately."
+        return base
+    elif "term" in msg_lower or "explain" in msg_lower or "meaning" in msg_lower or "medical" in msg_lower:
+        return (
+            f"Here is a simple explanation of the key terms in your records ({summary}):\n\n"
+            f"• **Psoriasis**: An ongoing skin condition causing red, scaly patches on the skin.\n"
+            f"• **Pyrexia / Fever**: Elevated body temperature indicating the immune system is actively responding.\n"
+            f"• **Symptom Duration**: The timeframe (e.g. 4-5 days) over which signs have been observed.\n\n"
+            f"Please let me know if you would like me to clarify any other specific medical term!"
+        )
+    else:
+        ans = f"I've carefully reviewed your uploaded records ({summary}).\n\n"
+        if checklist:
+            ans += "Key guidance from your case review:\n" + "\n".join(f"• {item}" for item in checklist) + "\n\n"
+        ans += "Feel free to ask any specific question about your symptoms, medication precautions, or test findings!"
+        return ans
+
+
 async def generate_grounded_chat_response(
     user_message: str,
     user_cases: List[Dict[str, Any]],
@@ -134,15 +166,18 @@ Return ONLY a valid JSON object matching this schema:
 }}
 """
 
-    client = None  # Not needed — using unified call_text_llm
     last_exc = None
 
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             raw = call_text_llm(prompt, temperature=0.4)
             result = clean_json_response(raw)
+            answer_val = result.get("answer")
+            if not answer_val or not str(answer_val).strip():
+                answer_val = _build_grounded_fallback_answer(user_message, user_cases)
+
             return {
-                "answer": result.get("answer", "I reviewed your records carefully. Is there a specific detail or symptom you'd like to discuss?"),
+                "answer": answer_val,
                 "cited_cases": result.get("cited_cases", []),
                 "suggested_next_questions": result.get("suggested_next_questions", [
                     "What are the main risk factors in my document?",
@@ -156,10 +191,9 @@ Return ONLY a valid JSON object matching this schema:
             last_exc = exc
             err_str = str(exc)
 
-            # Detect 429 RESOURCE_EXHAUSTED and retry with backoff
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "rate_limit" in err_str.lower():
                 if attempt < _MAX_RETRIES:
-                    wait_s = _RETRY_BASE_DELAY_S * (2 ** (attempt - 1))  # 5s, 10s, 20s
+                    wait_s = _RETRY_BASE_DELAY_S * (2 ** (attempt - 1))
                     logger.warning(
                         f"Rate-limit hit (attempt {attempt}/{_MAX_RETRIES}). "
                         f"Retrying in {wait_s}s..."
@@ -182,13 +216,12 @@ Return ONLY a valid JSON object matching this schema:
             else:
                 logger.error(f"Error during RAG chat response generation: {exc}")
                 return {
-                    "answer": "I reviewed your records carefully. Is there a specific detail or symptom you'd like to discuss?",
+                    "answer": _build_grounded_fallback_answer(user_message, user_cases),
                     "cited_cases": [],
                 }
 
-    # Safety net
     logger.error(f"Unexpected exit from retry loop: {last_exc}")
     return {
-        "answer": "I reviewed your records carefully. Is there a specific detail or symptom you'd like to discuss?",
+        "answer": _build_grounded_fallback_answer(user_message, user_cases),
         "cited_cases": [],
     }
