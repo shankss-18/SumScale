@@ -3,8 +3,13 @@ import React from 'react';
 export default function FormattedChatMessage({ text }) {
   if (!text) return null;
 
-  // Strip any "SOURCES CITED:" or "Sources Cited:" block from response to keep answers clean and concise
-  const cleanedText = text.replace(/\n*\s*(SOURCES|Sources|sources)\s+(CITED|Cited|cited):?[\s\S]*$/i, '').trim();
+  // Truncate any text at "SOURCES CITED" (matching any case, markdown **, ##, :, etc.)
+  let cleanedText = text;
+  const match = text.match(/(?:\*\*|###|##|#|\s|^)*sources\s+cited:?/i);
+  if (match && match.index !== undefined) {
+    cleanedText = text.substring(0, match.index).trim();
+  }
+
   if (!cleanedText) return null;
 
   const lines = cleanedText.split('\n');

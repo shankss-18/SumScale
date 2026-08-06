@@ -289,7 +289,8 @@ Return ONLY a valid JSON object matching this schema:
                 answer_val = _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report)
 
             # Clean any SOURCES CITED block from AI output text to keep responses concise
-            clean_answer = re.sub(r"\n*\s*(SOURCES|Sources|sources)\s+(CITED|Cited|cited):?[\s\S]*$", "", str(answer_val), flags=re.IGNORECASE).strip()
+            parts = re.split(r"(?:\*\*|###|##|#|\s|^)*sources\s+cited:?", str(answer_val), flags=re.IGNORECASE)
+            clean_answer = parts[0].strip()
 
             return {
                 "answer": clean_answer,
