@@ -381,8 +381,8 @@ const Dashboard = () => {
 
         {/* ── Document Records — Organic Fluid Layout ── */}
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xs font-extrabold uppercase tracking-widest text-[#006D77]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#006D77] whitespace-nowrap shrink-0">
               {t('dashboard.allDocs')} ({filteredCases.length})
             </h2>
             <input

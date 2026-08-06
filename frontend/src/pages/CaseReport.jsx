@@ -678,8 +678,8 @@ const CaseReport = () => {
       {/* Main Screen Layout */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-4">
 
-        {/* ── Top Header & Actions Bar ── */}
-        <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 flex flex-wrap items-center justify-between gap-4">
+        {/* ── Desktop Top Header & Actions Bar (Visible on lg screens) ── */}
+        <div className="hidden lg:flex bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Link to="/dashboard" className="text-xs font-extrabold text-[#006D77] hover:underline flex items-center space-x-1">
               <span>← Back</span>
@@ -787,39 +787,86 @@ const CaseReport = () => {
           </div>
         </div>
 
-        {/* Mobile Viewport Segmented Control Tabs (Visible on < 1024px screens) */}
-        <div className="lg:hidden flex items-center bg-[#EDF6F9] p-1.5 rounded-full border border-[#83C5BE]/40 shrink-0 shadow-2xs mb-2">
-          <button
-            type="button"
-            onClick={() => setMobileTab('chat')}
-            className={`flex-1 py-2 px-4 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-2 ${
-              mobileTab === 'chat'
-                ? 'bg-[#006D77] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>💬</span>
-            <span>{t('chat.title', 'Document Copilot Chat')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('insights')}
-            className={`flex-1 py-2 px-4 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-2 ${
-              mobileTab === 'insights'
-                ? 'bg-[#006D77] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>📊</span>
-            <span>{t('chat.insights', 'Case Insights')}</span>
-          </button>
+        {/* ── Mobile Native Chatbot App Bar (< 1024px) ── */}
+        <div className="lg:hidden bg-white rounded-2xl border border-[#83C5BE]/40 shadow-xs p-3 space-y-2 shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 min-w-0">
+              <Link to="/dashboard" className="text-xs font-bold text-[#006D77] shrink-0 hover:underline">
+                ← Back
+              </Link>
+              <span className="text-slate-300">|</span>
+              <h1 className="text-xs font-extrabold text-slate-900 truncate" title={displayTitle}>
+                {displayTitle}
+              </h1>
+            </div>
+
+            <div className="flex items-center space-x-1.5 shrink-0">
+              {flag === 'high' ? (
+                <span className="px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[8px] font-extrabold uppercase">
+                  HIGH ALERT
+                </span>
+              ) : flag === 'medium' ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-extrabold uppercase">
+                  MED RISK
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-[#EDF6F9] border border-[#83C5BE]/50 text-[#006D77] text-[8px] font-extrabold uppercase">
+                  LOW RISK
+                </span>
+              )}
+
+              <button
+                onClick={handleExport}
+                className="p-1 rounded-full hover:bg-slate-100 text-slate-600 text-xs"
+                title="Export Chat"
+              >
+                📥
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="p-1 rounded-full hover:bg-rose-50 text-rose-600 text-xs"
+                title="Delete Case"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          {/* Segmented Control Tabs */}
+          <div className="flex items-center bg-[#EDF6F9] p-1 rounded-full border border-[#83C5BE]/40 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setMobileTab('chat')}
+              className={`flex-1 py-1.5 px-3 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-1.5 ${
+                mobileTab === 'chat'
+                  ? 'bg-[#006D77] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>💬</span>
+              <span>Document Copilot Chat</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('insights')}
+              className={`flex-1 py-1.5 px-3 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-1.5 ${
+                mobileTab === 'insights'
+                  ? 'bg-[#006D77] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>📊</span>
+              <span>Case Insights</span>
+            </button>
+          </div>
         </div>
 
         {/* ── Main Body: Chat Stream (Flex 1) + Context Drawer ── */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
           {/* ── Left Side: Interactive Chat Room (Cols 8 or 12) ── */}
-          <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'} ${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[calc(100vh-250px)] min-h-[520px] lg:h-[calc(100vh-210px)] lg:min-h-[640px]`}>
+          <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'} ${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[calc(100vh-165px)] min-h-[500px] lg:h-[calc(100vh-210px)] lg:min-h-[640px]`}>
 
             {/* Chat Stream Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-[#EDF6F9] to-white border-b border-[#83C5BE]/30 flex items-center justify-between shrink-0">

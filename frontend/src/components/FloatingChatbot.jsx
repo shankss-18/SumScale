@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../api/client';
 import { useTranslation } from 'react-i18next';
 
 const FloatingChatbot = () => {
   const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
   const { i18n, t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -78,7 +80,7 @@ const FloatingChatbot = () => {
     saveHistory(initialHistory);
   };
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || location.pathname.startsWith('/case/')) return null;
 
   const handleSendText = async (textToSend) => {
     if (!textToSend.trim() || loading) return;
