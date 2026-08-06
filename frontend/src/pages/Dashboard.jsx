@@ -13,18 +13,18 @@ const RadialRingsChart = ({ slices }) => {
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 200); return () => clearTimeout(t); }, []);
 
   const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
-  const cx = 110; const cy = 110;
+  const cx = 120; const cy = 120;
   const rings = slices.map((sl, i) => ({
     ...sl,
-    radius: 80 - i * 18,
-    strokeWidth: 12,
+    radius: 94 - i * 22,
+    strokeWidth: 14,
     pct: sl.value / total,
   }));
   const circumference = (r) => 2 * Math.PI * r;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 w-full">
-      <svg width="220" height="220" viewBox="0 0 220 220" className="flex-shrink-0">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 w-full py-2">
+      <svg width="240" height="240" viewBox="0 0 240 240" className="shrink-0 drop-shadow-xs">
         <defs>
           {rings.map((r, i) => (
             <linearGradient key={i} id={`rg-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -54,30 +54,30 @@ const RadialRingsChart = ({ slices }) => {
               <circle cx={cx} cy={cy} r={ring.radius}
                 fill="none"
                 stroke={`url(#rg-${i})`}
-                strokeWidth={isHov ? ring.strokeWidth + 3 : ring.strokeWidth}
+                strokeWidth={isHov ? ring.strokeWidth + 4 : ring.strokeWidth}
                 strokeLinecap="round"
                 strokeDasharray={`${dash} ${c}`}
                 strokeDashoffset={c * 0.25}
                 style={{
                   transition: `stroke-dasharray 1.1s cubic-bezier(0.4,0,0.2,1) ${i * 150}ms, stroke-width 0.2s ease`,
                   transformOrigin: `${cx}px ${cy}px`,
-                  transform: isHov ? 'scale(1.04)' : 'scale(1)',
+                  transform: isHov ? 'scale(1.03)' : 'scale(1)',
                 }}
               />
             </g>
           );
         })}
         {/* Centre */}
-        <text x={cx} y={cy - 8} textAnchor="middle" fontSize="26" fontWeight="900" fill="#006D77">
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="32" fontWeight="900" fill="#006D77">
           {hovered !== null ? rings[hovered]?.value : total}
         </text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="9" fontWeight="700" fill="#83C5BE" letterSpacing="1">
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="10" fontWeight="800" fill="#83C5BE" letterSpacing="1.2">
           {hovered !== null ? rings[hovered]?.label.toUpperCase() : 'TOTAL DOCS'}
         </text>
       </svg>
 
       {/* Legend stacked */}
-      <div className="space-y-2.5 flex-1">
+      <div className="space-y-3.5 w-full sm:flex-1">
         {slices.map((sl, i) => {
           const pct = Math.round((sl.value / total) * 100);
           return (
@@ -86,14 +86,17 @@ const RadialRingsChart = ({ slices }) => {
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sl.color }} />
-                  <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{sl.label}</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ background: sl.color }} />
+                  <span className="text-xs font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors">{sl.label}</span>
                 </div>
-                <span className="text-[11px] font-extrabold" style={{ color: sl.color }}>{sl.value}</span>
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xs font-black text-slate-800">{sl.value}</span>
+                  <span className="text-[10px] font-bold text-slate-400">({pct}%)</span>
+                </div>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200/40">
                 <div className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{ width: animated ? `${pct}%` : '0%', background: `linear-gradient(90deg,${sl.colorLight},${sl.color})` }}
                 />

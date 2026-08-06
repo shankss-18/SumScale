@@ -26,6 +26,7 @@ const CaseReport = () => {
   const [sending, setSending] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [mobileTab, setMobileTab] = useState('chat'); // 'chat' or 'insights' on mobile
   const [customSuggestedPrompts, setCustomSuggestedPrompts] = useState(null);
   const [completedReminders, setCompletedReminders] = useState({});
 
@@ -786,11 +787,39 @@ const CaseReport = () => {
           </div>
         </div>
 
+        {/* Mobile Viewport Segmented Control Tabs (Visible on < 1024px screens) */}
+        <div className="lg:hidden flex items-center bg-[#EDF6F9] p-1.5 rounded-full border border-[#83C5BE]/40 shrink-0 shadow-2xs mb-2">
+          <button
+            type="button"
+            onClick={() => setMobileTab('chat')}
+            className={`flex-1 py-2 px-4 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-2 ${
+              mobileTab === 'chat'
+                ? 'bg-[#006D77] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>💬</span>
+            <span>{t('chat.title', 'Document Copilot Chat')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('insights')}
+            className={`flex-1 py-2 px-4 rounded-full text-xs font-extrabold transition-all flex items-center justify-center space-x-2 ${
+              mobileTab === 'insights'
+                ? 'bg-[#006D77] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>📊</span>
+            <span>{t('chat.insights', 'Case Insights')}</span>
+          </button>
+        </div>
+
         {/* ── Main Body: Chat Stream (Flex 1) + Context Drawer ── */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
           {/* ── Left Side: Interactive Chat Room (Cols 8 or 12) ── */}
-          <div className={`${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[620px] lg:h-[calc(100vh-210px)] lg:min-h-[640px]`}>
+          <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'} ${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[calc(100vh-250px)] min-h-[520px] lg:h-[calc(100vh-210px)] lg:min-h-[640px]`}>
 
             {/* Chat Stream Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-[#EDF6F9] to-white border-b border-[#83C5BE]/30 flex items-center justify-between shrink-0">
@@ -1074,7 +1103,7 @@ const CaseReport = () => {
 
           {/* ── Right Side: Context Drawer & Executive Insights (Cols 4) ── */}
           {showSidebar && (
-            <div className="lg:col-span-4 h-auto max-h-[620px] lg:h-[calc(100vh-210px)] lg:min-h-[640px] overflow-y-auto pr-1 space-y-4 custom-scrollbar">
+            <div className={`${mobileTab === 'insights' ? 'block' : 'hidden lg:block'} lg:col-span-4 h-auto max-h-[calc(100vh-250px)] lg:h-[calc(100vh-210px)] lg:min-h-[640px] overflow-y-auto pr-1 space-y-4 custom-scrollbar`}>
 
               {/* URGENT CRITICAL ALERT CARD — MOVED TO TOP OF RIGHT PANEL FOR IMMEDIATE USER NEED */}
               {(flag === 'high' || findings.severity === 'high' || findings.escalation_flag === 'high') && (
