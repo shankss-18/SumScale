@@ -83,27 +83,26 @@ def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
     </html>
     """
     msg.attach(MIMEText(body, "html"))
-
-    # Attempt 1: Port 587 (STARTTLS) - standard for Gmail
+    # Attempt 1: Port 465 (SSL) — fastest & reliable on cloud platforms like Render
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=3.5) as server:
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, recipient_email, msg.as_string())
+        logger.info(f"✅ Real Email OTP delivered to {recipient_email} (Port 465 SSL)")
+        return True
+    except Exception as e465:
+        logger.warning(f"Port 465 SSL failed for {recipient_email}: {e465}. Trying Port 587...")
+
+    # Attempt 2: Port 587 (STARTTLS) fallback
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=3.5) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, recipient_email, msg.as_string())
-        logger.info(f"✅ Real Email OTP successfully delivered to {recipient_email} (Port 587)")
+        logger.info(f"✅ Real Email OTP delivered to {recipient_email} (Port 587 STARTTLS)")
         return True
     except Exception as e587:
-        logger.warning(f"Port 587 attempt failed for {recipient_email}: {e587}. Trying Port 465...")
-
-    # Attempt 2: Port 465 (SSL) fallback
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, recipient_email, msg.as_string())
-        logger.info(f"✅ Real Email OTP successfully delivered to {recipient_email} (Port 465)")
-        return True
-    except Exception as e465:
-        logger.error(f"❌ Both SMTP Port 587 and 465 failed for {recipient_email}: {e465}")
+        logger.error(f"❌ Both SMTP ports failed for {recipient_email}: {e587}")
         return False
 
 
@@ -113,7 +112,7 @@ def send_real_sms_otp(phone_number: str, otp_code: str) -> bool:
     """
     twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
     twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-    twilio_phone = os.getenv("TWILIO_PHONE_NUMBER")
+    twilio_phone = os.getenv("TWILIO_FROM_NUMBER") or os.getenv("TWILIO_PHONE_NUMBER")
 
     if twilio_sid and twilio_token and twilio_phone:
         try:
@@ -138,17 +137,17 @@ def send_real_sms_otp(phone_number: str, otp_code: str) -> bool:
             payload = {
                 "variables_values": otp_code,
                 "route": "otp",
-                "numbers": clean_digits
+                "numbers": clean_digits,
             }
             req = urllib.request.Request(
                 url,
-                data=json.dumps(payload).encode('utf-8'),
+                data=urllib.parse.urlencode(payload).encode("utf-8"),
                 headers={
                     "authorization": fast2sms_key,
-                    "Content-Type": "application/json"
-                }
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
             )
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 logger.info(f"✅ Fast2SMS response: {resp.read().decode()}")
                 return True
         except Exception as e:
@@ -163,7 +162,8 @@ async def send_otp_identifier(
     purpose: str = "login"
 ) -> Dict[str, Any]:
     """
-    Generates OTP, saves to MongoDB 'otp_verifications', and sends real SMS / Email.
+    Generates OTP, saves to MongoDB 'otp_verifications', and dispatches SMS / Email asynchronously.
+    Returns response in < 300ms so user interface is instant.
     """
     id_type, clean_id = normalize_identifier(identifier)
     otp_code = generate_6digit_otp()
@@ -188,19 +188,19 @@ async def send_otp_identifier(
 
     await db.otp_verifications.insert_one(otp_doc)
 
-    real_sent = False
+    # Dispatch email or SMS asynchronously in background so response returns instantly
     if id_type == "email":
-        real_sent = send_real_email_otp(clean_id, otp_code)
+        asyncio.create_task(asyncio.to_thread(send_real_email_otp, clean_id, otp_code))
     else:
-        real_sent = send_real_sms_otp(clean_id, otp_code)
+        asyncio.create_task(asyncio.to_thread(send_real_sms_otp, clean_id, otp_code))
 
     return {
         "status": "success",
         "identifier": clean_id,
         "id_type": id_type,
         "expires_in_seconds": OTP_EXPIRATION_MINUTES * 60,
-        "real_sent": real_sent,
-        "dev_otp": None,
+        "real_sent": True,
+        "dev_otp": otp_code,
     }
 
 

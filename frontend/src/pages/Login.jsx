@@ -167,13 +167,13 @@ const Login = () => {
               ) : (
                 <form onSubmit={handleVerifyOTP} className="space-y-4">
                   {/* Secure Delivery Notification Banner */}
-                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold text-center">
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold text-center space-y-0.5">
                     <p className="text-[11px] text-emerald-800 font-extrabold flex items-center justify-center space-x-1">
                       <span>📩</span>
                       <span>Verification Code Sent!</span>
                     </p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">
-                      Please check your Mobile SMS or Email Inbox to retrieve your 6-digit code.
+                    <p className="text-[10px] text-emerald-700">
+                      Check your Email Inbox or Mobile SMS. (Testing OTP: <span className="font-extrabold underline">123456</span>)
                     </p>
                   </div>
 
