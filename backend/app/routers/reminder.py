@@ -127,3 +127,71 @@ async def delete_reminder(
         raise HTTPException(status_code=404, detail="Reminder not found")
 
     return {"status": "deleted", "reminder_id": reminder_id}
+
+
+# ---------------------------------------------------------------------------
+# Free Email Alerts & 1-Click Google Calendar Integrations
+# ---------------------------------------------------------------------------
+
+from pydantic import BaseModel
+from app.services.reminder_service import create_google_calendar_link, send_free_email_alert
+
+
+class EmailAlertRequest(BaseModel):
+    case_id: Optional[str] = None
+    title: str
+    summary: str
+    checklist: Optional[List[str]] = None
+    recipient_email: Optional[str] = None
+    due_date: Optional[datetime] = None
+
+
+class CalendarLinkRequest(BaseModel):
+    title: str
+    details: str
+    start_dt: Optional[datetime] = None
+
+
+@router.post("/send-email", summary="Send free email notification & Google Calendar alert via Gmail SMTP")
+async def send_email_notification_endpoint(
+    body: EmailAlertRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    target_email = body.recipient_email or current_user.email
+    if not target_email:
+        raise HTTPException(status_code=400, detail="No valid recipient email address provided")
+
+    cal_link = create_google_calendar_link(
+        title=body.title,
+        details=body.summary,
+        start_dt=body.due_date,
+    )
+
+    success = send_free_email_alert(
+        recipient_email=target_email,
+        case_title=body.title,
+        summary=body.summary,
+        checklist=body.checklist or [],
+        google_calendar_url=cal_link,
+    )
+
+    return {
+        "success": success,
+        "recipient": target_email,
+        "google_calendar_url": cal_link,
+        "message": "Email alert dispatched successfully" if success else "Failed to send email alert"
+    }
+
+
+@router.post("/google-calendar", summary="Generate a 1-click Google Calendar template URL")
+async def get_google_calendar_link(
+    body: CalendarLinkRequest,
+    _current_user: UserInDB = Depends(get_current_user),
+):
+    url = create_google_calendar_link(
+        title=body.title,
+        details=body.details,
+        start_dt=body.start_dt,
+    )
+    return {"google_calendar_url": url}
+

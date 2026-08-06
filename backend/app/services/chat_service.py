@@ -243,6 +243,7 @@ CRITICAL TONE & STYLE INSTRUCTIONS (MUST FOLLOW):
 3. NATURAL CONVERSATIONAL PROSE: Express insights in clear, natural paragraphs in {lang_name}.
 4. EMPATHETIC & REASSURING: Provide thoughtful, helpful guidance that feels personal and easy to understand.
 5. GROUNDED IN FACTS: Only use facts from the user case context, threat verification data, and conversation history provided below.{threat_prompt_section}
+6. PROACTIVE REMINDER & ALERT OFFER: Ask the user if they would like to set up constant notifications or reminders for this case (e.g., "Would you like me to set up constant notifications or reminders for this case? You can enable instant free Email Alerts via Gmail, SMS, or add follow-up reminders directly to your Google Calendar with 1 click.").
 
 <user_data>
 USER CASE HISTORY CONTEXT:
@@ -268,9 +269,9 @@ Return ONLY a valid JSON object matching this schema:
         }}
     ],
     "suggested_next_questions": [
-        "Follow-up question 1 in {lang_name}",
-        "Follow-up question 2 in {lang_name}",
-        "Follow-up question 3 in {lang_name}"
+        "What step-by-step precautions should I take?",
+        "Set up email & Google Calendar reminders for this case",
+        "Explain key terms simply"
     ],
     "auto_generated_title": "A short, clear 3 to 6 word title in {lang_name}"
 }}
@@ -290,9 +291,9 @@ Return ONLY a valid JSON object matching this schema:
                 "answer": answer_val,
                 "cited_cases": result.get("cited_cases", []),
                 "suggested_next_questions": result.get("suggested_next_questions", [
-                    "What are the main risk factors in my document?",
-                    "Explain key medical / technical terms simply",
-                    "What step-by-step precautions should I take?"
+                    "What step-by-step precautions should I take?",
+                    "Set up email & Google Calendar reminders for this case",
+                    "Explain key terms simply"
                 ]),
                 "auto_generated_title": result.get("auto_generated_title", None),
             }

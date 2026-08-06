@@ -118,5 +118,12 @@ export const apiListReminders = (statusFilter = null) => {
   return apiClient.get('/reminders', { params });
 };
 
+export const apiSendEmailAlert = (data) =>
+  apiClient.post('/reminders/send-email', data);
+
+export const apiGetGoogleCalendarLink = (data) =>
+  apiClient.post('/reminders/google-calendar', data);
+
+
 export const apiCompleteReminder = (reminderId) =>
   apiClient.put(`/reminders/${reminderId}/complete`);

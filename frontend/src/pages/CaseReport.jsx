@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
+import CaseReminderCard from '../components/CaseReminderCard';
 import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -1251,6 +1252,9 @@ const CaseReport = () => {
                   </a>
                 </div>
               )}
+
+              {/* Card 5: 100% Free Notification & Google Calendar Reminders */}
+              <CaseReminderCard caseData={caseData} />
 
             </div>
           )}
