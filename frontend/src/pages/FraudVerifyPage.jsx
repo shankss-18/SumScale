@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import FraudEvidencePanel from '../components/FraudEvidencePanel';
 import IntelBanner from '../components/IntelBanner';
 import { useAuth } from '../context/AuthContext';
@@ -254,8 +253,6 @@ export default function FraudVerifyPage() {
           </div>
         )}
       </main>
-
-      <FloatingChatbot />
     </div>
   );
 }

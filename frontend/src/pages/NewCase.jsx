@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import { apiCreateCase, apiUploadCaseFile, apiAnalyzeCase } from '../api/client';
 
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
@@ -339,8 +338,6 @@ const NewCase = () => {
 
         </div>{/* end white container */}
       </main>
-
-      <FloatingChatbot />
     </div>
   );
 };

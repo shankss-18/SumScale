@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import { apiGetCase, apiClarifyCase } from '../api/client';
 
 const ClarifyingChat = () => {
@@ -155,8 +154,6 @@ const ClarifyingChat = () => {
           </button>
         </form>
       </main>
-
-      <FloatingChatbot />
     </div>
   );
 };

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import { apiListCases, apiUpdateCaseCategory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -581,8 +580,6 @@ const Dashboard = () => {
 
 
       </main>
-
-      <FloatingChatbot />
     </div>
   );
 };

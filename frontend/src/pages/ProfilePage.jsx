@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import AlertSettings from '../components/AlertSettings';
 import { useAuth } from '../context/AuthContext';
 
@@ -125,8 +124,6 @@ const ProfilePage = () => {
           <AlertSettings />
         </div>
       </main>
-
-      <FloatingChatbot />
     </div>
   );
 };

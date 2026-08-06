@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
-import FloatingChatbot from '../components/FloatingChatbot';
 import CaseReminderCard from '../components/CaseReminderCard';
 import FormattedChatMessage from '../components/FormattedChatMessage';
 import SourceFusionBadge from '../components/SourceFusionBadge';
@@ -1415,8 +1414,6 @@ const CaseReport = () => {
         </div>
 
       </div>
-
-      <FloatingChatbot />
     </div>
   );
 };
