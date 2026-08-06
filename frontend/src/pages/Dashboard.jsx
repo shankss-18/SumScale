@@ -497,24 +497,19 @@ const Dashboard = () => {
                   const pool = idx % 2 === 1 ? greenThemes : bluishWhiteThemes;
                   const config = pool.find(t => t.id !== prevId) || pool[idx % pool.length];
                   prevId = config.id;
+                  const targetUrl = c.status === 'clarifying' ? `/case/${caseId}/clarify` : `/case/${caseId}`;
 
                   return (
-                    <Link
+                    <div
                       key={caseId}
-                      to={c.status === 'clarifying' ? `/case/${caseId}/clarify` : `/case/${caseId}`}
-                      className="doc-item no-underline group cursor-pointer"
+                      className="doc-item group relative flex flex-col justify-between h-full p-6 transition-all duration-300"
                       style={{
                         borderRadius: shape,
                         background: config.bg,
                         border: flag === 'high' && config.id !== 'rose' ? 'none' : `1px solid ${config.glow}`,
                         boxShadow: `0 4px 20px ${config.glow}`,
-                        transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.35s ease',
                         animation: `doc-enter 0.45s ease both`,
                         animationDelay: `${idx * 55}ms`,
-                        padding: '1.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 16px 40px ${config.glow}, 0 4px 12px ${config.glow}`; }}
                       onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 4px 20px ${config.glow}`; }}
@@ -529,80 +524,83 @@ const Dashboard = () => {
                         pointerEvents: 'none',
                       }} />
 
-                    {/* Interactive Mark Category & Status Controls */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-3 relative z-30" onClick={(e) => e.stopPropagation()}>
-                      {/* Risk Severity Dropdown */}
-                      <select
-                        value={flag || 'low'}
-                        onChange={(e) => handleMarkCategory(e, caseId, undefined, e.target.value)}
-                        title="Click to mark Risk Severity"
-                        className="cursor-pointer appearance-none outline-none font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
-                        style={{
-                          background: config.tagBg,
-                          color: config.tagText,
-                          border: `1px solid ${config.tagBorder}`,
-                        }}
-                      >
-                        <option value="high" className="text-slate-900 bg-white font-bold">🚨 {t('severity.high')}</option>
-                        <option value="medium" className="text-slate-900 bg-white font-bold">⚠️ {t('severity.medium')}</option>
-                        <option value="low" className="text-slate-900 bg-white font-bold">✅ {t('severity.low')}</option>
-                      </select>
+                      {/* Interactive Mark Category & Status Controls */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-3 relative z-30">
+                        {/* Risk Severity Dropdown */}
+                        <select
+                          value={flag || 'low'}
+                          onChange={(e) => handleMarkCategory(e, caseId, undefined, e.target.value)}
+                          title="Click to mark Risk Severity"
+                          className="cursor-pointer appearance-none outline-none font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
+                          style={{
+                            background: config.tagBg,
+                            color: config.tagText,
+                            border: `1px solid ${config.tagBorder}`,
+                          }}
+                        >
+                          <option value="high" className="text-slate-900 bg-white font-bold">🚨 {t('severity.high')}</option>
+                          <option value="medium" className="text-slate-900 bg-white font-bold">⚠️ {t('severity.medium')}</option>
+                          <option value="low" className="text-slate-900 bg-white font-bold">✅ {t('severity.low')}</option>
+                        </select>
 
-                      {/* Status Progress Dropdown */}
-                      <select
-                        value={c.status === 'completed' ? 'completed' : c.status === 'clarifying' ? 'clarifying' : 'draft'}
-                        onChange={(e) => handleMarkCategory(e, caseId, e.target.value, undefined)}
-                        title="Click to mark Document Status"
-                        className="cursor-pointer appearance-none outline-none font-bold text-[9px] tracking-wide px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
-                        style={{
-                          background: config.tagBg,
-                          color: config.tagText,
-                          border: `1px solid ${config.tagBorder}`,
-                        }}
-                      >
-                        <option value="completed" className="text-slate-900 bg-white font-bold">✅ {t('dashboard.fullyAnalyzed')}</option>
-                        <option value="clarifying" className="text-slate-900 bg-white font-bold">💬 {t('dashboard.needsClarification')}</option>
-                        <option value="draft" className="text-slate-900 bg-white font-bold">📝 {t('dashboard.draftCollecting')}</option>
-                      </select>
+                        {/* Status Progress Dropdown */}
+                        <select
+                          value={c.status === 'completed' ? 'completed' : c.status === 'clarifying' ? 'clarifying' : 'draft'}
+                          onChange={(e) => handleMarkCategory(e, caseId, e.target.value, undefined)}
+                          title="Click to mark Document Status"
+                          className="cursor-pointer appearance-none outline-none font-bold text-[9px] tracking-wide px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
+                          style={{
+                            background: config.tagBg,
+                            color: config.tagText,
+                            border: `1px solid ${config.tagBorder}`,
+                          }}
+                        >
+                          <option value="completed" className="text-slate-900 bg-white font-bold">✅ {t('dashboard.fullyAnalyzed')}</option>
+                          <option value="clarifying" className="text-slate-900 bg-white font-bold">💬 {t('dashboard.needsClarification')}</option>
+                          <option value="draft" className="text-slate-900 bg-white font-bold">📝 {t('dashboard.draftCollecting')}</option>
+                        </select>
+                      </div>
+
+                      {/* Growable content area */}
+                      <div style={{ flex: 1 }} className="relative z-10">
+                        {/* Main Title */}
+                        <Link to={targetUrl} className="no-underline">
+                          <h3 style={{ fontSize: '14px', fontWeight: 800, color: config.text, lineHeight: 1.35, marginBottom: '6px' }} className="line-clamp-2 hover:underline">
+                            {c.title || c.findings?.summary || c.findings?.pattern_classification || 'Document Analysis'}
+                          </h3>
+                        </Link>
+
+                        {/* Description / Summary Body */}
+                        <p style={{ fontSize: '11px', color: config.sub, lineHeight: 1.45 }} className="line-clamp-2">
+                          {(() => {
+                            if (c.title) {
+                              return c.findings?.summary || c.findings?.pattern_classification || c.findings?.remediation_checklist?.[0] || 'Document processed and grounded for copilot chat.';
+                            }
+                            const textSnippet = c.evidence?.[0]?.extracted_text;
+                            const cleanSnippet = (textSnippet && textSnippet.trim().length > 15 && textSnippet.toLowerCase() !== 'analyze')
+                              ? textSnippet
+                              : null;
+                            return c.findings?.remediation_checklist?.[0] || c.findings?.pattern_classification || cleanSnippet || 'Grounding complete — ready for questions.';
+                          })()}
+                        </p>
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{ borderTop: `1px solid ${config.divider}`, paddingTop: '10px', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="relative z-10">
+                        <span style={{ fontSize: '10px', color: config.dateTxt, fontWeight: 500 }}>
+                          {new Date(c.created_at || Date.now()).toLocaleDateString()}
+                        </span>
+                        <Link to={targetUrl} className="no-underline">
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: config.arrow, transition: 'transform 0.25s ease', display: 'inline-block' }}
+                            className="group-hover:translate-x-1.5">
+                            {t('dashboard.viewReport')}
+                          </span>
+                        </Link>
+                      </div>
                     </div>
-
-                    {/* Growable content area */}
-                    <div style={{ flex: 1 }} className="relative z-10">
-                      {/* Main Title (Custom Title or AI Summary Heading) */}
-                      <h3 style={{ fontSize: '14px', fontWeight: 800, color: config.text, lineHeight: 1.35, marginBottom: '6px' }} className="line-clamp-2">
-                        {c.title || c.findings?.summary || c.findings?.pattern_classification || 'Document Analysis'}
-                      </h3>
-
-                      {/* Description / Summary Body */}
-                      <p style={{ fontSize: '11px', color: config.sub, lineHeight: 1.45 }} className="line-clamp-2">
-                        {(() => {
-                          if (c.title) {
-                            return c.findings?.summary || c.findings?.pattern_classification || c.findings?.remediation_checklist?.[0] || 'Document processed and grounded for copilot chat.';
-                          }
-                          // If no custom title yet, show remediation checklist, pattern classification, or clean text (>15 chars)
-                          const textSnippet = c.evidence?.[0]?.extracted_text;
-                          const cleanSnippet = (textSnippet && textSnippet.trim().length > 15 && textSnippet.toLowerCase() !== 'analyze')
-                            ? textSnippet
-                            : null;
-                          return c.findings?.remediation_checklist?.[0] || c.findings?.pattern_classification || cleanSnippet || 'Grounding complete — ready for questions.';
-                        })()}
-                      </p>
-                    </div>
-
-                    {/* Footer — always at bottom */}
-                    <div style={{ borderTop: `1px solid ${config.divider}`, paddingTop: '10px', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="relative z-10">
-                      <span style={{ fontSize: '10px', color: config.dateTxt, fontWeight: 500 }}>
-                        {new Date(c.created_at).toLocaleDateString()}
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: config.arrow, transition: 'transform 0.25s ease', display: 'inline-block' }}
-                        className="group-hover:translate-x-1.5">
-                        {t('dashboard.viewReport')}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              });
-            })()}
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
