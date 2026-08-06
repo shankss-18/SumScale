@@ -1,0 +1,72 @@
+# =============================================================================
+# OmniAid — .gitignore
+# =============================================================================
+
+# --- Secrets & environment variables ---
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+ENV/
+.python-version
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Pytest & coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+
+# --- Uploaded files (never commit user uploads) ---
+/backend/uploads/
+uploads/
+*.pdf
+*.docx
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.ogg
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# --- OS & editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Logs ---
+*.log
+logs/

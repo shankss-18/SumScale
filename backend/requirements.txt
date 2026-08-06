@@ -1,0 +1,44 @@
+# =============================================================================
+# OmniAid Backend — Python Dependencies (pinned)
+# =============================================================================
+# Install: pip install -r requirements.txt
+# On Windows, replace python-magic with python-magic-bin (see README)
+# =============================================================================
+
+# --- Web framework & AI SDK ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+google-genai==1.2.0
+
+# --- Validation & settings ---
+pydantic==2.10.3
+pydantic-settings==2.7.1
+email-validator==2.2.0
+
+# --- Database & background scheduling ---
+motor==3.6.0
+apscheduler==3.10.4
+
+# --- Authentication ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# --- File uploads & type detection ---
+python-multipart==0.0.20
+python-magic-bin==0.4.14
+
+# --- Rate limiting ---
+slowapi==0.1.9
+
+# --- Environment ---
+python-dotenv==1.0.1
+
+# --- Logging (JSON formatter) ---
+python-json-logger==3.2.1
+
+# --- HTTP client (for external APIs) ---
+httpx==0.28.1
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.24.0

@@ -1,0 +1,92 @@
+"""
+OmniAid — RAG Chatbot Router
+============================
+POST /chat — Endpoint for grounded conversational Q&A over the user's case history.
+
+Security Rules:
+- Rate limited separately (10 attempts per minute per IP).
+- RAG context is strictly filtered by user_id == current_user.id.
+- User input wrapped in <user_data> delimiters.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from app.schemas.chat import ChatRequest, ChatResponse
+from app.dependencies.auth import get_current_user
+from app.models.user import UserInDB
+from app.utils.limiter import limiter
+from app.services.chat_service import generate_grounded_chat_response
+
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+@router.post(
+    "",
+    response_model=ChatResponse,
+    summary="Grounded AI Assistant Q&A over user case history",
+)
+@limiter.limit("10/minute")
+async def chat_with_assistant(
+    request: Request,
+    body: ChatRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection unavailable")
+
+    # SECURITY RULE: Fetch ONLY cases owned by current_user.id
+    cursor = db.cases.find({"user_id": current_user.id}).sort("created_at", -1)
+    user_cases = await cursor.to_list(length=50)
+
+    result = await generate_grounded_chat_response(
+        user_message=body.message.strip(),
+        user_cases=user_cases,
+        language=body.language or "en",
+        chat_history=body.chat_history or [],
+    )
+
+    return ChatResponse(
+        answer=result["answer"],
+        cited_cases=result["cited_cases"],
+        suggested_next_questions=result.get("suggested_next_questions", []),
+        auto_generated_title=result.get("auto_generated_title", None),
+    )
+
+
+@router.get(
+    "/tts",
+    summary="Proxy Text-to-Speech audio bytes server-to-server",
+)
+async def get_tts_audio(text: str, lang: str = "en"):
+    """
+    Proxy Google TTS API server-to-server to stream audio/mpeg
+    directly to the frontend without browser CORS or origin restrictions.
+    """
+    clean_text = text[:300].strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Text is required for TTS")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.get(
+                "https://translate.google.com/translate_tts",
+                params={
+                    "ie": "UTF-8",
+                    "q": clean_text,
+                    "tl": lang,
+                    "client": "tw-ob",
+                },
+                headers=headers,
+            )
+
+            if res.status_code != 200:
+                raise HTTPException(status_code=502, detail="TTS service error")
+
+            return Response(content=res.content, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS generation error: {str(e)}")
