@@ -52,8 +52,15 @@ const CaseReport = () => {
   const [customSuggestedPrompts, setCustomSuggestedPrompts] = useState(null);
   const [completedReminders, setCompletedReminders] = useState({});
 
-  // Collapsible Side Panel Cards State
-  const [collapsedCards, setCollapsedCards] = useState({});
+  // Collapsible Side Panel Cards State (default collapsed on load)
+  const [collapsedCards, setCollapsedCards] = useState({
+    insights: true,
+    evidence: true,
+    concepts: true,
+    actionPlan: true,
+    audit: true,
+    reminders: true,
+  });
   const toggleCardCollapse = (cardId) => {
     setCollapsedCards((prev) => ({
       ...prev,

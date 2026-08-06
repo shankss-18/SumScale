@@ -30,10 +30,14 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    if not credentials or credentials.scheme.lower() != "bearer":
-        raise credentials_exception
+    token = None
+    if credentials and credentials.scheme.lower() == "bearer":
+        token = credentials.credentials
+    else:
+        token = request.query_params.get("token")
 
-    token = credentials.credentials
+    if not token:
+        raise credentials_exception
 
     try:
         payload = decode_token(token, expected_type="access")

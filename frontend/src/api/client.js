@@ -110,8 +110,10 @@ export const apiUpdateCaseCategory = (caseId, { status, severity }) =>
 
 
 
-export const getFileDownloadUrl = (caseId, fileId) =>
-  `${API_BASE_URL}/cases/${caseId}/files/${fileId}`;
+export const getFileDownloadUrl = (caseId, fileId) => {
+  const token = getAccessToken();
+  return `${API_BASE_URL}/cases/${caseId}/files/${fileId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+};
 
 // --- Chat & Reminders ---
 export const apiChat = (message, language = 'en', chatHistory = [], caseId = null) =>
