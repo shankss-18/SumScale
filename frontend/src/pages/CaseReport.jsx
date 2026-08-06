@@ -790,7 +790,7 @@ const CaseReport = () => {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
           {/* ── Left Side: Interactive Chat Room (Cols 8 or 12) ── */}
-          <div className={`${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[calc(100vh-210px)] min-h-[640px]`}>
+          <div className={`${showSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} flex flex-col bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm overflow-hidden h-[620px] lg:h-[calc(100vh-210px)] lg:min-h-[640px]`}>
 
             {/* Chat Stream Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-[#EDF6F9] to-white border-b border-[#83C5BE]/30 flex items-center justify-between shrink-0">
@@ -1074,7 +1074,7 @@ const CaseReport = () => {
 
           {/* ── Right Side: Context Drawer & Executive Insights (Cols 4) ── */}
           {showSidebar && (
-            <div className="lg:col-span-4 h-[calc(100vh-210px)] min-h-[640px] overflow-y-auto pr-1 space-y-4 custom-scrollbar">
+            <div className="lg:col-span-4 h-auto max-h-[620px] lg:h-[calc(100vh-210px)] lg:min-h-[640px] overflow-y-auto pr-1 space-y-4 custom-scrollbar">
 
               {/* URGENT CRITICAL ALERT CARD — MOVED TO TOP OF RIGHT PANEL FOR IMMEDIATE USER NEED */}
               {(flag === 'high' || findings.severity === 'high' || findings.escalation_flag === 'high') && (

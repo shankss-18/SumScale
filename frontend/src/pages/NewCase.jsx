@@ -165,11 +165,10 @@ const NewCase = () => {
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-10">
 
         {/* ── White container ── */}
-        <div className="nc-section relative overflow-hidden" style={{
+        <div className="nc-section relative overflow-hidden p-6 sm:p-10" style={{
           background: 'white',
           borderRadius: '2rem',
           boxShadow: '0 8px 40px rgba(0,109,119,0.10)',
-          padding: '2.5rem 2.5rem 2.5rem',
           animationDelay: '0ms',
         }}>
 

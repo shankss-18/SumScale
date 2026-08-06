@@ -23,7 +23,7 @@ const RadialRingsChart = ({ slices }) => {
   const circumference = (r) => 2 * Math.PI * r;
 
   return (
-    <div className="flex items-center gap-5 w-full">
+    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 w-full">
       <svg width="220" height="220" viewBox="0 0 220 220" className="flex-shrink-0">
         <defs>
           {rings.map((r, i) => (
