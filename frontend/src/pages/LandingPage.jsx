@@ -90,60 +90,51 @@ const LandingPage = () => {
           transform: translateY(0);
         }
 
-        /* ── Capability card pop & shining light sweep ── */
+        /* ── Capability card pop with Shining Glass Shimmer ── */
         .cap-card {
           opacity: 0;
           transform: translateY(40px) scale(0.97);
+          position: relative;
+          overflow: hidden;
           transition:
             opacity   0.4s ease-out,
             transform 0.15s ease-out,
             box-shadow 0.15s ease-out,
             border-color 0.15s ease-out;
-          position: relative;
-          overflow: hidden;
+        }
+        .cap-card::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -85%;
+          width: 50%;
+          height: 200%;
+          background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          transform: rotate(25deg);
+          transition: left 0.65s ease-in-out, opacity 0.65s ease-in-out;
+          pointer-events: none;
+          z-index: 20;
+          opacity: 0;
         }
         .cap-card.revealed {
           opacity: 1;
           transform: translateY(0) scale(1);
-          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+        }
+        .cap-card:hover::before {
+          left: 135%;
+          opacity: 1;
         }
         .cap-card:hover {
           transform: translateY(-8px) scale(1.015) !important;
-          box-shadow: 0 22px 50px -6px rgba(0,109,119,0.26);
-          border-color: rgba(131,197,190,0.8);
-          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
-        }
-
-        /* ── Card Shining Reflection Sweep Effect ── */
-        .cap-card::after {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -70%;
-          width: 50%;
-          height: 200%;
-          background: linear-gradient(
-            115deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.08) 25%,
-            rgba(255, 255, 255, 0.55) 50%,
-            rgba(255, 255, 255, 0.08) 75%,
-            transparent 100%
-          );
-          transform: rotate(22deg);
-          pointer-events: none;
-          opacity: 0;
-          z-index: 20;
-        }
-
-        .cap-card:hover::after {
-          opacity: 1;
-          animation: card-shine-sweep 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-
-        @keyframes card-shine-sweep {
-          0% { left: -70%; }
-          100% { left: 150%; }
+          box-shadow: 0 22px 50px -8px rgba(0,109,119,0.25), 0 0 25px rgba(131,197,190,0.35);
+          border-color: rgba(131, 197, 190, 0.8) !important;
+          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s ease-out;
         }
 
         /* ── Capability cards hover lift ── */

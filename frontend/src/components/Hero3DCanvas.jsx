@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 /**
- * Hero3DCanvas — Three.js WebGL Interactive 3D Cosmic Star Core
- * Replaces plain circles with a 3D Star Crystal Gem Core, 
- * 8-Point Star Lattice, Sparkling Star Belts, and smooth mouse interaction.
+ * Hero3DCanvas — Real Three.js WebGL Interactive 3D Canvas
+ * Features: Interactive 3D Particle Sphere, 3D Celestial Star Lattice,
+ * inner counter-rotating star crystal, and responsive mouse-tracking rotation.
  */
 export default function Hero3DCanvas() {
   const containerRef = useRef(null);
@@ -20,7 +20,7 @@ export default function Hero3DCanvas() {
     const height = container.clientHeight || window.innerHeight;
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.z = 7.2;
+    camera.position.z = 7.5;
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -40,105 +40,77 @@ export default function Hero3DCanvas() {
     scene.add(pointLight1);
 
     const pointLight2 = new THREE.PointLight(0x006d77, 5, 50);
-    pointLight2.position.set(-6, -6, 2);
+    pointLight2.position.set(-6, -6, -2);
     scene.add(pointLight2);
 
-    const pointLight3 = new THREE.PointLight(0xffffff, 3, 30);
-    pointLight3.position.set(0, 0, 8);
-    scene.add(pointLight3);
-
-    // ── 3. Main 3D Star Group ─────────────────────────────────────────
+    // ── 3. 3D Objects Group ──────────────────────────────────────────
     const mainGroup = new THREE.Group();
     scene.add(mainGroup);
 
-    // A. 3D Star Crystal Gem Core (Octahedron / Diamond Shape)
-    const starCoreGeo = new THREE.OctahedronGeometry(1.7, 0);
-    const starCoreMat = new THREE.MeshPhysicalMaterial({
-      color: 0x006d77,
-      emissive: 0x004d56,
-      emissiveIntensity: 0.6,
-      roughness: 0.15,
-      metalness: 0.85,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
-      wireframe: false,
-    });
-    const starCoreMesh = new THREE.Mesh(starCoreGeo, starCoreMat);
-    mainGroup.add(starCoreMesh);
+    // Core 3D Sphere Points (Fiber/Data Lattice)
+    const sphereGeo = new THREE.IcosahedronGeometry(2.0, 4);
 
-    // B. Inner Glowing Wireframe Star Cage
-    const starCageGeo = new THREE.IcosahedronGeometry(2.3, 1);
-    const starCageMat = new THREE.MeshBasicMaterial({
+    const pointsMat = new THREE.PointsMaterial({
+      color: 0x006d77,
+      size: 0.05,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+    });
+    const pointsMesh = new THREE.Points(sphereGeo, pointsMat);
+    mainGroup.add(pointsMesh);
+
+    // Inner Wireframe Mesh
+    const wireMat = new THREE.MeshBasicMaterial({
       color: 0x83c5be,
       wireframe: true,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.2,
     });
-    const starCageMesh = new THREE.Mesh(starCageGeo, starCageMat);
-    mainGroup.add(starCageMesh);
+    const wireMesh = new THREE.Mesh(sphereGeo, wireMat);
+    mainGroup.add(wireMesh);
 
-    // C. 3D Star Spikes / Rays (8-Point Diamond Beams)
-    const starSpikeGroup = new THREE.Group();
-    const spikeGeo = new THREE.ConeGeometry(0.18, 3.8, 4);
-    const spikeMat = new THREE.MeshStandardMaterial({
-      color: 0x83c5be,
-      emissive: 0x006d77,
-      emissiveIntensity: 0.5,
-      roughness: 0.2,
-      metalness: 0.8,
+    // ── 3D CELESTIAL STAR SYSTEM (Replaces plain rings) ─────────────
+    const starGroup = new THREE.Group();
+    mainGroup.add(starGroup);
+
+    // Outer 3D Star Crystal Mesh (Octahedron Geometry)
+    const starGeo = new THREE.OctahedronGeometry(3.3, 0);
+    const starEdges = new THREE.EdgesGeometry(starGeo);
+    const starLineMat = new THREE.LineBasicMaterial({
+      color: 0x006d77,
+      linewidth: 2,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.75,
     });
+    const starLines = new THREE.LineSegments(starEdges, starLineMat);
+    starGroup.add(starLines);
 
-    // Create 6 Spikes pointing along X, Y, Z directions forming a 3D Starburst
-    const directions = [
-      [1, 0, 0], [-1, 0, 0],
-      [0, 1, 0], [0, -1, 0],
-      [0, 0, 1], [0, 0, -1]
-    ];
-
-    directions.forEach(([x, y, z]) => {
-      const spike = new THREE.Mesh(spikeGeo, spikeMat);
-      const dirVector = new THREE.Vector3(x, y, z);
-      spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirVector);
-      starSpikeGroup.add(spike);
-    });
-
-    mainGroup.add(starSpikeGroup);
-
-    // D. Outer Orbiting Star Particle Rings (Twinkling Starlight Diamonds)
-    const starRingCount = 180;
-    const starRingGeo = new THREE.BufferGeometry();
-    const starRingPositions = new Float32Array(starRingCount * 3);
-
-    for (let i = 0; i < starRingCount; i++) {
-      const angle = (i / starRingCount) * Math.PI * 2;
-      const radius = 3.2 + Math.sin(i * 0.5) * 0.3;
-      starRingPositions[i * 3] = Math.cos(angle) * radius;
-      starRingPositions[i * 3 + 1] = (Math.random() - 0.5) * 0.4;
-      starRingPositions[i * 3 + 2] = Math.sin(angle) * radius;
-    }
-    starRingGeo.setAttribute('position', new THREE.BufferAttribute(starRingPositions, 3));
-
-    const starRingMat = new THREE.PointsMaterial({
+    // Star Corner Glowing Nodes
+    const starPointsMat = new THREE.PointsMaterial({
       color: 0x83c5be,
-      size: 0.08,
+      size: 0.12,
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,
     });
-    const starRingMesh = new THREE.Points(starRingGeo, starRingMat);
-    starRingMesh.rotation.x = Math.PI / 4;
-    mainGroup.add(starRingMesh);
+    const starPointsMesh = new THREE.Points(starGeo, starPointsMat);
+    starGroup.add(starPointsMesh);
 
-    // E. Secondary Tilted Star Ring
-    const starRingMesh2 = new THREE.Points(starRingGeo, starRingMat);
-    starRingMesh2.rotation.x = -Math.PI / 3;
-    starRingMesh2.rotation.y = Math.PI / 6;
-    mainGroup.add(starRingMesh2);
+    // Nested Counter-Rotating 3D Inner Star Crystal (Icosahedron Geometry)
+    const innerStarGeo = new THREE.IcosahedronGeometry(2.7, 0);
+    const innerStarEdges = new THREE.EdgesGeometry(innerStarGeo);
+    const innerStarLineMat = new THREE.LineBasicMaterial({
+      color: 0x83c5be,
+      linewidth: 1.5,
+      transparent: true,
+      opacity: 0.5,
+    });
+    const innerStarLines = new THREE.LineSegments(innerStarEdges, innerStarLineMat);
+    starGroup.add(innerStarLines);
 
-    // F. Background Sparkling Starlight Particles Field
-    const bgParticlesCount = 450;
+    // Floating 3D Background Particles Field
+    const bgParticlesCount = 400;
     const bgGeo = new THREE.BufferGeometry();
     const bgPositions = new Float32Array(bgParticlesCount * 3);
 
@@ -153,12 +125,12 @@ export default function Hero3DCanvas() {
       color: 0x006d77,
       size: 0.04,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.45,
     });
     const bgPoints = new THREE.Points(bgGeo, bgMat);
     scene.add(bgPoints);
 
-    // ── 4. Fast Interactive Mouse Control ─────────────────────────────
+    // ── 4. Interactive Mouse Control ─────────────────────────────────
     let mouseX = 0;
     let mouseY = 0;
     let targetRotationX = 0;
@@ -192,30 +164,28 @@ export default function Hero3DCanvas() {
     const animate = () => {
       const elapsedTime = clock.getElapsedTime();
 
-      // Continuous 3D Rotations of Star Core & Rays
-      starCoreMesh.rotation.y = elapsedTime * 0.4;
-      starCoreMesh.rotation.x = elapsedTime * 0.2;
+      // Slow, smooth spinning 3D Star & Sphere rotations
+      mainGroup.rotation.y = elapsedTime * 0.12;
+      mainGroup.rotation.x = Math.sin(elapsedTime * 0.08) * 0.1;
 
-      starCageMesh.rotation.y = -elapsedTime * 0.25;
+      starGroup.rotation.y = elapsedTime * 0.15;
+      starGroup.rotation.z = Math.sin(elapsedTime * 0.1) * 0.15;
 
-      starSpikeGroup.rotation.y = elapsedTime * 0.3;
-      starSpikeGroup.rotation.z = Math.sin(elapsedTime * 0.5) * 0.2;
+      innerStarLines.rotation.y = -elapsedTime * 0.18;
+      innerStarLines.rotation.x = elapsedTime * 0.12;
 
-      starRingMesh.rotation.z = elapsedTime * 0.35;
-      starRingMesh2.rotation.z = -elapsedTime * 0.3;
+      bgPoints.rotation.y = elapsedTime * 0.04;
 
-      bgPoints.rotation.y = elapsedTime * 0.05;
+      // Gentle organic breathing pulse
+      const pulseScale = 1 + Math.sin(elapsedTime * 0.6) * 0.035;
+      mainGroup.scale.set(pulseScale, pulseScale, pulseScale);
 
       // Fast Responsive Mouse Parallax Lerp
-      targetRotationY += (mouseX - targetRotationY) * 0.25;
-      targetRotationX += (mouseY - targetRotationX) * 0.25;
+      targetRotationY += (mouseX - targetRotationY) * 0.2;
+      targetRotationX += (mouseY - targetRotationX) * 0.2;
 
       mainGroup.rotation.y += targetRotationY;
       mainGroup.rotation.x += targetRotationX;
-
-      // Pulse Star Scale subtly
-      const scalePulse = 1 + Math.sin(elapsedTime * 2) * 0.04;
-      starSpikeGroup.scale.set(scalePulse, scalePulse, scalePulse);
 
       renderer.render(scene, camera);
       animationFrameId = requestAnimationFrame(animate);
@@ -233,15 +203,17 @@ export default function Hero3DCanvas() {
         container.removeChild(renderer.domElement);
       }
 
-      // Dispose WebGL Geometries and Materials
-      starCoreGeo.dispose();
-      starCoreMat.dispose();
-      starCageGeo.dispose();
-      starCageMat.dispose();
-      spikeGeo.dispose();
-      spikeMat.dispose();
-      starRingGeo.dispose();
-      starRingMat.dispose();
+      // Dispose Geometries and Materials
+      sphereGeo.dispose();
+      pointsMat.dispose();
+      wireMat.dispose();
+      starGeo.dispose();
+      starEdges.dispose();
+      starLineMat.dispose();
+      starPointsMat.dispose();
+      innerStarGeo.dispose();
+      innerStarEdges.dispose();
+      innerStarLineMat.dispose();
       bgGeo.dispose();
       bgMat.dispose();
       renderer.dispose();
