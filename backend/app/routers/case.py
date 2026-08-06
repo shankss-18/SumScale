@@ -198,6 +198,17 @@ async def analyze_case(
     ]
 
     dept = case_doc.get("department")
+
+    # Auto-detect if evidence contains fraud indicators
+    combined_evidence = " ".join(evidence_texts).lower()
+    fraud_keywords = [
+        "fraud", "scam", "bank", "otp", "phishing", "sms", "link",
+        "whatsapp", "transaction", "money", "account", "police", "card",
+        "cyber", "verify", "paytm", "upi", "lottery", "prize", "urgent"
+    ]
+    if any(k in combined_evidence for k in fraud_keywords):
+        dept = "fraud"
+
     previous_facts = case_doc.get("merged_facts", {})
     clarifying_qa = {
         qa["question_id"]: qa.get("answer", "")
@@ -206,23 +217,23 @@ async def analyze_case(
     }
 
     # 2. Dispatch to department pipeline
-    if dept == "health":
-        new_status, merged_facts, questions, findings = await extract_and_reason_health(
-            evidence_texts=evidence_texts,
-            previous_facts=previous_facts,
-            clarifying_answers=clarifying_qa,
-            language=language,
-        )
-    elif dept == "fraud":
+    if dept == "fraud":
         new_status, merged_facts, questions, findings = await extract_and_reason_fraud(
             evidence_texts=evidence_texts,
             previous_facts=previous_facts,
             language=language,
         )
-    else:  # data
+    elif dept == "data":
         new_status, merged_facts, questions, findings = await extract_and_reason_data(
             evidence_texts=evidence_texts,
             previous_facts=previous_facts,
+            language=language,
+        )
+    else:  # health
+        new_status, merged_facts, questions, findings = await extract_and_reason_health(
+            evidence_texts=evidence_texts,
+            previous_facts=previous_facts,
+            clarifying_answers=clarifying_qa,
             language=language,
         )
 

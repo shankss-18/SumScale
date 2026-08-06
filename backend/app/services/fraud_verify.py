@@ -65,9 +65,9 @@ def _extract_domain(value: str) -> str:
 # ---------------------------------------------------------------------------
 
 async def check_safe_browsing(url: str) -> SafeBrowsingResult:
-    key = settings.GOOGLE_SAFE_BROWSING_KEY
+    key = settings.GOOGLE_SAFE_BROWSING_KEY or settings.GOOGLE_PLACES_API_KEY or settings.GEMINI_API_KEY
     if not key:
-        logger.warning("GOOGLE_SAFE_BROWSING_KEY not set — skipping safe browsing check")
+        logger.warning("No Google API key set — skipping safe browsing check")
         return SafeBrowsingResult(available=False, malicious=False)
 
     try:

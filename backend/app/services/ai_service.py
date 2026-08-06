@@ -218,9 +218,23 @@ Return ONLY a valid JSON object matching this schema:
     symptoms = merged_facts.get("symptoms", [])
     duration = merged_facts.get("duration", "unknown")
 
+    # Detect if evidence is actually fraud / scam / non-medical
+    combined_lower = combined_user_data.lower()
+    fraud_keywords = [
+        "fraud", "scam", "bank", "otp", "phishing", "sms", "link",
+        "whatsapp", "transaction", "money", "account", "police", "card",
+        "cyber", "verify", "paytm", "upi", "lottery", "prize", "urgent"
+    ]
+    is_fraud_or_scam = any(k in combined_lower for k in fraud_keywords)
+
+    # Only ask medical clarifying questions if symptoms are explicitly reported AND not a fraud document
+    has_valid_symptoms = bool(symptoms) and any(s and s != "Symptom analysis unavailable" for s in symptoms)
+
     needs_clarification = (
-        not clarifying_answers
-        and (not symptoms or duration == "unknown" or len(symptoms) == 0)
+        not is_fraud_or_scam
+        and not clarifying_answers
+        and has_valid_symptoms
+        and duration == "unknown"
     )
 
     if needs_clarification:
