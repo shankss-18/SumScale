@@ -21,28 +21,57 @@ const FloatingChatbot = () => {
 
   const [chatHistory, setChatHistory] = useState(initialHistory);
 
+  const getStorageKey = () => {
+    const keyId = user?.id || user?.email || 'default_user';
+    return `sumscale_chat_history_${keyId}`;
+  };
+
   // Load chat history from localStorage
   useEffect(() => {
-    if (user?.id) {
-      const saved = localStorage.getItem(`sumscale_chat_history_${user.id}`);
-      if (saved) {
-        try {
-          setChatHistory(JSON.parse(saved));
-        } catch {
-          setChatHistory(initialHistory);
+    const key = getStorageKey();
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setChatHistory(parsed);
+          return;
         }
-      } else {
-        setChatHistory(initialHistory);
+      } catch {}
+    }
+    // Fallback search across any stored chat key
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sumscale_chat_history_')) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(k) || '[]');
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setChatHistory(parsed);
+            return;
+          }
+        } catch {}
       }
     }
-  }, [user?.id]);
+    setChatHistory(initialHistory);
+  }, [user]);
+
+  // Listen for open_floating_chat event triggered from dashboard previous chats
+  useEffect(() => {
+    const handleOpenEvent = (e) => {
+      setIsOpen(true);
+      if (e.detail?.text) {
+        handleSendText(e.detail.text);
+      }
+    };
+    window.addEventListener('open_floating_chat', handleOpenEvent);
+    return () => window.removeEventListener('open_floating_chat', handleOpenEvent);
+  }, []);
 
   // Save chat history to localStorage
   const saveHistory = (newHistory) => {
     setChatHistory(newHistory);
-    if (user?.id) {
-      localStorage.setItem(`sumscale_chat_history_${user.id}`, JSON.stringify(newHistory));
-    }
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify(newHistory));
   };
 
   const clearChatHistory = () => {

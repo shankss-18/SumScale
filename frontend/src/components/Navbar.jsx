@@ -83,12 +83,6 @@ const Navbar = () => {
             </Link>
           )}
 
-          <a
-            href="/#about-us"
-            className="hover:text-[#006D77] transition-colors"
-          >
-            ABOUT US
-          </a>
         </nav>
 
         {/* Right Controls */}

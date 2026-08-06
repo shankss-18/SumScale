@@ -219,16 +219,34 @@ const Dashboard = () => {
   useEffect(() => { fetchCases(); }, []);
 
   useEffect(() => {
-    if (user?.id) {
-      const saved = localStorage.getItem(`sumscale_chat_history_${user.id}`);
-      if (saved) {
+    const userId = user?.id || user?.email || 'default_user';
+    const allChats = [];
+    const mainKey = `sumscale_chat_history_${userId}`;
+    const mainSaved = localStorage.getItem(mainKey);
+    if (mainSaved) {
+      try {
+        const parsed = JSON.parse(mainSaved);
+        parsed.filter((item) => item.sender === 'user').forEach(item => allChats.push(item));
+      } catch {}
+    }
+    // Scan all keys in localStorage for chat histories
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('sumscale_chat_history_') || k.startsWith('sumscale_case_chat_'))) {
         try {
-          const parsed = JSON.parse(saved);
-          setSavedChats(parsed.filter((item) => item.sender === 'user'));
-        } catch { setSavedChats([]); }
+          const parsed = JSON.parse(localStorage.getItem(k) || '[]');
+          if (Array.isArray(parsed)) {
+            parsed.filter((item) => item.sender === 'user').forEach(item => {
+              if (!allChats.some(c => c.text === item.text)) {
+                allChats.push(item);
+              }
+            });
+          }
+        } catch {}
       }
     }
-  }, [user?.id]);
+    setSavedChats(allChats);
+  }, [user]);
 
   /* ─── Stats ─── */
   const total = cases.length;
@@ -413,6 +431,9 @@ const Dashboard = () => {
                       <div
                         className="relative cursor-pointer"
                         style={{ maxWidth: '160px' }}
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('open_floating_chat', { detail: { text: chat.text } }));
+                        }}
                       >
                         <div
                           className="rounded-2xl px-4 py-3 text-[11px] font-semibold leading-relaxed transition-all duration-300 ease-out border"
