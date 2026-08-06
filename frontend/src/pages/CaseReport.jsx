@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
 import CaseReminderCard from '../components/CaseReminderCard';
-import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory } from '../api/client';
+import FormattedChatMessage from '../components/FormattedChatMessage';
+import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory, apiSendEmailAlert } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const CaseReport = () => {
@@ -356,6 +357,22 @@ const CaseReport = () => {
 
       if (Array.isArray(returnedNextQuestions) && returnedNextQuestions.length >= 3) {
         setCustomSuggestedPrompts(returnedNextQuestions);
+      }
+
+      // Auto-dispatch email alert if user asks for email in chat
+      const lowerPrompt = userPrompt.toLowerCase();
+      if (lowerPrompt.includes('email') || lowerPrompt.includes('mail')) {
+        try {
+          const findings = caseData?.findings || {};
+          await apiSendEmailAlert({
+            title: caseData?.title || 'Case Update',
+            summary: findings.summary || findings.pattern_classification || 'Document Analysis Summary',
+            checklist: findings.remediation_checklist || [],
+            recipient_email: user?.email,
+          });
+        } catch (emailErr) {
+          console.warn('Failed to send auto email from chat:', emailErr);
+        }
       }
 
       // Auto update chat title after first 2 messages if title isn't custom set yet
@@ -817,11 +834,13 @@ const CaseReport = () => {
                             : 'bg-[#EDF6F9]/70 border border-[#83C5BE]/40 text-slate-800 rounded-tl-none shadow-2xs font-normal'
                         }`}
                       >
-                        {/* Text Content (only if non-empty after stripping attachment label) */}
+                        {/* Text Content */}
                         {m.text && (
-                          <div className="whitespace-pre-wrap font-sans">
-                            {m.text}
-                          </div>
+                          isUser ? (
+                            <div className="whitespace-pre-wrap font-sans font-medium">{m.text}</div>
+                          ) : (
+                            <FormattedChatMessage text={m.text} />
+                          )
                         )}
 
                         {/* Inline Image Previews for user messages */}
@@ -1057,6 +1076,29 @@ const CaseReport = () => {
           {showSidebar && (
             <div className="lg:col-span-4 space-y-4">
 
+              {/* URGENT CRITICAL ALERT CARD — MOVED TO TOP OF RIGHT PANEL FOR IMMEDIATE USER NEED */}
+              {(flag === 'high' || findings.severity === 'high' || findings.escalation_flag === 'high') && (
+                <div className="bg-rose-50 rounded-3xl border-2 border-rose-300 p-5 space-y-3 shadow-md animate-pulse">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-3 h-3 rounded-full bg-rose-600 animate-ping shrink-0" />
+                    <h4 className="text-xs font-black text-rose-900 uppercase tracking-wider">
+                      🚨 IMMEDIATE ACTION REQUIRED / HIGH RISK ALERT
+                    </h4>
+                  </div>
+                  <p className="text-xs text-rose-900 leading-relaxed font-bold">
+                    Critical or high-risk findings detected in this case. Immediate specialist check-up or security action is strongly recommended.
+                  </p>
+                  <a
+                    href={caseData.department === 'fraud' ? "https://cybercrime.gov.in/" : "https://www.google.com/maps/search/doctors+near+me"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block w-full text-center py-2.5 px-4 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md transition-all hover:scale-102"
+                  >
+                    {caseData.department === 'fraud' ? 'Report to CyberCrime Authorities →' : 'Find Nearby Specialists on Google Maps →'}
+                  </a>
+                </div>
+              )}
+
               {/* Card 1: Key Findings & Summary */}
               <div className="bg-white rounded-3xl border border-[#83C5BE]/40 shadow-sm p-5 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1229,29 +1271,6 @@ const CaseReport = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Card 3: Healthcare / Expert Referral Button if High Priority */}
-              {flag === 'high' && (
-                <div className="bg-rose-50 rounded-3xl border border-rose-200 p-5 space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                    <h4 className="text-xs font-extrabold text-rose-900 uppercase tracking-wide">
-                      Recommended Follow-up
-                    </h4>
-                  </div>
-                  <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                    Clinical or high-risk findings detected. We recommend consulting a healthcare professional or specialist.
-                  </p>
-                  <a
-                    href="https://www.google.com/maps/search/doctors+near+me"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-block w-full text-center py-2.5 px-4 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-sm transition-all"
-                  >
-                    Find Nearby Specialists on Google Maps →
-                  </a>
-                </div>
-              )}
 
               {/* Card 5: 100% Free Notification & Google Calendar Reminders */}
               <CaseReminderCard caseData={caseData} />
