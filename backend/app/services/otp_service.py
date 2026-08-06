@@ -63,34 +63,7 @@ def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
     </html>
     """
 
-    # 1. Try Resend REST API (Best for cloud hosts like Render)
-    if resend_key:
-        try:
-            import httpx
-            sender = os.getenv("RESEND_FROM_EMAIL", "SumScale Security <onboarding@resend.dev>")
-            res = httpx.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {resend_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "from": sender,
-                    "to": [recipient_email],
-                    "subject": f"{otp_code} is your SumScale verification code",
-                    "html": html_content,
-                },
-                timeout=8.0,
-            )
-            if res.status_code in (200, 201):
-                logger.info(f"✅ Real Email OTP delivered to {recipient_email} via Resend REST API")
-                return True
-            else:
-                logger.error(f"❌ Resend API error ({res.status_code}): {res.text}")
-        except Exception as e:
-            logger.error(f"❌ Resend API dispatch failed: {e}")
-
-    # 2. Try Brevo REST API
+    # 1. Try Brevo REST API (100% Free, 300/day, HTTPS Port 443 — allows ANY recipient email address without domain verification!)
     if brevo_key:
         try:
             import httpx
@@ -116,6 +89,35 @@ def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
                 logger.error(f"❌ Brevo API error ({res.status_code}): {res.text}")
         except Exception as e:
             logger.error(f"❌ Brevo API dispatch failed: {e}")
+
+    # 2. Try Resend REST API (HTTPS Port 443 — free 3,000/mo, requires verified domain for external recipients)
+    if resend_key:
+        try:
+            import httpx
+            sender = os.getenv("RESEND_FROM_EMAIL", "SumScale Security <onboarding@resend.dev>")
+            res = httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": sender,
+                    "to": [recipient_email],
+                    "subject": f"{otp_code} is your SumScale verification code",
+                    "html": html_content,
+                },
+                timeout=8.0,
+            )
+            if res.status_code in (200, 201):
+                logger.info(f"✅ Real Email OTP delivered to {recipient_email} via Resend REST API")
+                return True
+            elif res.status_code == 403:
+                logger.error(f"❌ Resend API 403 Forbidden: Resend unverified test key can ONLY send emails to your own account email. To send to any recipient, add a free BREVO_API_KEY in Render dashboard.")
+            else:
+                logger.error(f"❌ Resend API error ({res.status_code}): {res.text}")
+        except Exception as e:
+            logger.error(f"❌ Resend API dispatch failed: {e}")
 
     # 3. SMTP Fallback (Gmail / Custom SMTP)
     smtp_user = os.getenv("SMTP_USER")
