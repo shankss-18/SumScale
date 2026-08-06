@@ -48,13 +48,13 @@ const Login = () => {
   const handleSendOTP = async (e) => {
     e?.preventDefault();
     setLocalError('');
-    const targetId = identifier.trim() || '+91 95509 60744';
-    if (!identifier.trim()) {
-      setIdentifier(targetId);
+    if (!identifier.trim() || !identifier.includes('@')) {
+      setLocalError('Please enter a valid email address.');
+      return;
     }
     setSendingOtp(true);
     try {
-      await apiSendOTP(targetId, 'login');
+      await apiSendOTP(identifier.trim(), 'login');
     } catch {
       // Non-blocking catch
     } finally {
@@ -105,7 +105,7 @@ const Login = () => {
 
             {/* Bottom Tag */}
             <div className="relative z-10 text-[10px] text-white/70 font-semibold tracking-wider uppercase text-center">
-              Secured with Mobile & Email OTP
+              Secured with Email OTP
             </div>
           </div>
 
@@ -125,7 +125,7 @@ const Login = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    <span>Instant Mobile SMS & Gmail Verification</span>
+                    <span>Instant Free Email OTP Verification</span>
                   </div>
                 </div>
               </div>
@@ -141,13 +141,14 @@ const Login = () => {
                 <form onSubmit={handleSendOTP} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Phone Number or Email Address
+                      Email Address
                     </label>
                     <input
-                      type="text"
+                      type="email"
+                      required
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="e.g. +91 95509 60744 or you@gmail.com"
+                      placeholder="e.g. name@example.com"
                       className="w-full px-4 py-3 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all font-medium"
                     />
                   </div>
@@ -173,7 +174,7 @@ const Login = () => {
                       <span>Verification Code Sent!</span>
                     </p>
                     <p className="text-[10px] text-emerald-700">
-                      Check your Email Inbox or Mobile SMS. (Testing OTP: <span className="font-extrabold underline">123456</span>)
+                      Check your Email Inbox. (Testing OTP: <span className="font-extrabold underline">123456</span>)
                     </p>
                   </div>
 
@@ -214,7 +215,7 @@ const Login = () => {
                       }}
                       className="text-slate-500 hover:text-slate-800 font-medium"
                     >
-                      ← Change Number / Email
+                      ← Change Email Address
                     </button>
 
                     <button

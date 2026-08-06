@@ -62,11 +62,15 @@ class MockCollection:
                 return False
         return True
 
-    async def find_one(self, query):
-        for doc in self.docs:
-            if self._matches(doc, query):
-                return doc.copy()
-        return None
+    async def find_one(self, query, sort=None):
+        matching = [doc for doc in self.docs if self._matches(doc, query)]
+        if not matching:
+            return None
+        if sort and isinstance(sort, list) and len(sort) > 0:
+            key, direction = sort[0]
+            reverse = direction == -1
+            matching.sort(key=lambda d: d.get(key, datetime.min), reverse=reverse)
+        return matching[0].copy()
 
     async def insert_one(self, doc):
         doc_copy = doc.copy()
@@ -153,6 +157,7 @@ class MockDatabase:
         self.users = MockCollection()
         self.cases = MockCollection()
         self.reminders = MockCollection()
+        self.otp_verifications = MockCollection()
 
 
 @pytest.fixture(autouse=True)

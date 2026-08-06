@@ -25,7 +25,7 @@ from app.schemas.auth import (
 )
 from app.models.user import UserResponse
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.services.otp_service import send_otp_identifier, verify_otp_identifier, normalize_identifier
+from app.services.otp_service import send_otp_identifier, verify_otp_identifier, normalize_email
 from app.utils.limiter import limiter
 from app.dependencies.auth import get_current_user
 from app.models.user import UserInDB
@@ -48,29 +48,20 @@ async def register(request: Request, body: RegisterRequest):
             detail="Database connection unavailable",
         )
 
-    # Normalize email & phone
     email_clean = body.email.lower().strip()
-    phone_clean = body.phone_number.strip() if body.phone_number else None
 
-    # Check for existing account by email or phone
-    query = [{"email": email_clean}]
-    if phone_clean:
-        query.append({"phone_number": phone_clean})
-
-    existing_user = await db.users.find_one({"$or": query})
+    existing_user = await db.users.find_one({"email": email_clean})
     if existing_user:
-        # Generic error message to prevent account enumeration attacks
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unable to register with these details",
         )
 
-    # Hash password (never log or store plaintext)
     hashed_pwd = hash_password(body.password)
 
     new_user_doc = {
         "email": email_clean,
-        "phone_number": phone_clean,
+        "phone_number": None,
         "hashed_password": hashed_pwd,
         "created_at": datetime.now(timezone.utc),
     }
@@ -81,7 +72,6 @@ async def register(request: Request, body: RegisterRequest):
     return UserResponse(
         id=user_id,
         email=email_clean,
-        phone_number=phone_clean,
         created_at=new_user_doc["created_at"],
     )
 
@@ -90,7 +80,7 @@ async def register(request: Request, body: RegisterRequest):
     "/login",
     response_model=TokenResponse,
     summary="Authenticate user and issue JWT tokens",
-    description="Validates credentials via email or phone number. Rate limited to 5 attempts per minute.",
+    description="Validates credentials via email address. Rate limited to 5 attempts per minute.",
 )
 @limiter.limit("5/minute")
 async def login(request: Request, body: LoginRequest):
@@ -101,20 +91,9 @@ async def login(request: Request, body: LoginRequest):
             detail="Database connection unavailable",
         )
 
-    identifier = (body.email or body.phone_number or "").strip()
-    if not identifier:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please provide an email address or phone number",
-        )
+    email_clean = body.email.lower().strip()
 
-    # Search user doc by email OR phone_number
-    user_doc = await db.users.find_one({
-        "$or": [
-            {"email": identifier.lower()},
-            {"phone_number": identifier},
-        ]
-    })
+    user_doc = await db.users.find_one({"email": email_clean})
 
     invalid_cred_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -181,17 +160,19 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
 @router.post(
     "/send-otp",
     response_model=OTPResponse,
-    summary="Send 6-digit OTP to Phone or Email",
+    summary="Send 6-digit OTP to Email",
 )
 async def send_otp_endpoint(request: Request, body: SendOTPRequest):
     db = getattr(request.app.state, "db", None)
     if db is None:
         raise HTTPException(status_code=500, detail="Database connection unavailable")
 
-    _, cleaned_id = normalize_identifier(body.identifier)
+    try:
+        clean_email = body.get_email()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
 
-    result = await send_otp_identifier(db=db, identifier=body.identifier, purpose=body.purpose)
-    # Ensure real_sent is marked true so front-end OTP entry step always opens smoothly
+    result = await send_otp_identifier(db=db, email=clean_email, purpose=body.purpose or "login")
     result["real_sent"] = True
     return OTPResponse(**result)
 
@@ -206,26 +187,27 @@ async def verify_otp_endpoint(request: Request, body: VerifyOTPRequest):
     if db is None:
         raise HTTPException(status_code=500, detail="Database connection unavailable")
 
-    is_valid, msg_or_id = await verify_otp_identifier(db=db, identifier=body.identifier, otp_code=body.otp_code)
+    try:
+        clean_email = body.get_email()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+
+    is_valid, msg_or_email = await verify_otp_identifier(db=db, email=clean_email, otp_code=body.otp_code)
     if not is_valid:
-        raise HTTPException(status_code=400, detail=msg_or_id)
+        raise HTTPException(status_code=400, detail=msg_or_email)
 
-    cleaned_id = msg_or_id
+    verified_email = msg_or_email
 
-    # Check if user already exists by email or phone_number
-    query = {"$or": [{"email": cleaned_id}, {"phone_number": cleaned_id}]}
-    user_doc = await db.users.find_one(query)
+    # Check if user exists by email
+    user_doc = await db.users.find_one({"email": verified_email})
 
     if not user_doc:
-        # Create new user record automatically via OTP signup!
-        dummy_email = cleaned_id if "@" in cleaned_id else f"{cleaned_id.replace('+', '').replace(' ', '')}@omniaid.ai"
         new_user = {
-            "email": dummy_email,
-            "phone_number": cleaned_id if "@" not in cleaned_id else None,
-            "hashed_password": hash_password(f"OTP_AUTH_{cleaned_id}"),
+            "email": verified_email,
+            "phone_number": None,
+            "hashed_password": hash_password(f"OTP_AUTH_{verified_email}"),
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "phone_verified": True if "@" not in cleaned_id else False,
-            "email_verified": True if "@" in cleaned_id else False,
+            "email_verified": True,
         }
         res = await db.users.insert_one(new_user)
         user_id = str(res.inserted_id)
@@ -240,3 +222,4 @@ async def verify_otp_endpoint(request: Request, body: VerifyOTPRequest):
         refresh_token=refresh_token,
         token_type="bearer",
     )
+

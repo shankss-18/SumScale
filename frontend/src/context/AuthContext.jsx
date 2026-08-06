@@ -46,11 +46,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, [logout]);
 
-  const login = async (emailOrPhone, password) => {
+  const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiLogin(emailOrPhone, password);
+      const res = await apiLogin(email, password);
       const { access_token } = res.data;
       
       setAccessToken(access_token);
@@ -62,8 +62,8 @@ export const AuthProvider = ({ children }) => {
       return meRes.data;
     } catch (err) {
       // Fallback for demo account or any error state so demo access is 100% reliable
-      if (emailOrPhone === 'demo@omniaid.ai' || emailOrPhone?.includes('demo') || err.message?.includes('Network') || !err.response || err.response?.status === 401) {
-        const dummyUser = { id: 'demo_user_123', email: emailOrPhone || 'demo@omniaid.ai', phone_number: '+919550960744', created_at: new Date().toISOString() };
+      if (email === 'demo@omniaid.ai' || email?.includes('demo') || err.message?.includes('Network') || !err.response || err.response?.status === 401) {
+        const dummyUser = { id: 'demo_user_123', email: email || 'demo@omniaid.ai', created_at: new Date().toISOString() };
         setUser(dummyUser);
         localStorage.setItem('access_token', 'demo_token_123');
         setAccessToken('demo_token_123');
@@ -77,11 +77,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password, phoneNumber = null) => {
+  const register = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      await apiRegister(email, password, phoneNumber);
+      await apiRegister(email, password);
       return await login(email, password);
     } catch (err) {
       if (err.message?.includes('Network') || !err.response) {
@@ -94,11 +94,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithOTP = async (identifier, otpCode, fullName = null) => {
+  const loginWithOTP = async (email, otpCode, fullName = null) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiVerifyOTP(identifier, otpCode, fullName);
+      const res = await apiVerifyOTP(email, otpCode, fullName);
       const { access_token } = res.data;
 
       setAccessToken(access_token);
@@ -110,8 +110,8 @@ export const AuthProvider = ({ children }) => {
       return meRes.data;
     } catch (err) {
       // Fallback: If network error or demo OTP or endpoint error, log in user seamlessly!
-      const userEmail = identifier.includes('@') ? identifier : `${identifier.replace(/\D/g, '')}@omniaid.ai`;
-      const dummyUser = { id: `user_${Date.now()}`, email: userEmail, phone_number: identifier.includes('@') ? null : identifier, created_at: new Date().toISOString() };
+      const userEmail = email.trim().toLowerCase();
+      const dummyUser = { id: `user_${Date.now()}`, email: userEmail, created_at: new Date().toISOString() };
       setUser(dummyUser);
       localStorage.setItem('access_token', 'otp_token_demo');
       setAccessToken('otp_token_demo');

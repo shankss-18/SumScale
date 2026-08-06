@@ -1,9 +1,9 @@
 """
-OmniAid — Free Multilingual OTP Service
-=======================================
-Generates secure 6-digit OTPs for Phone & Email authentication.
-Dispatches REAL Emails via Gmail SMTP (100% Free) and REAL SMS via Twilio / Fast2SMS,
-with fallback to Dev Mode when API credentials are not yet set in .env.
+OmniAid — Free Email OTP Service
+===============================
+Generates secure 6-digit OTPs for Email authentication.
+Dispatches REAL Emails via SMTP (Gmail, Brevo, Resend, etc.),
+with automatic DB storage & 5-minute expiration.
 """
 
 import os
@@ -11,12 +11,12 @@ import random
 import logging
 import datetime
 import smtplib
+import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Tuple, Optional, Dict, Any
 from dotenv import load_dotenv
 
-# Ensure environment variables from .env are loaded into os.environ
 load_dotenv()
 
 logger = logging.getLogger("omniaid.otp_service")
@@ -24,44 +24,34 @@ logger = logging.getLogger("omniaid.otp_service")
 # 5 minutes expiration
 OTP_EXPIRATION_MINUTES = 5
 
+
 def generate_6digit_otp() -> str:
     """Generate secure 6-digit numeric OTP string."""
     return f"{random.randint(100000, 999999)}"
 
 
-def normalize_identifier(identifier: str) -> Tuple[str, str]:
-    """
-    Classify and normalize identifier into ('phone' | 'email', cleaned_string).
-    """
-    cleaned = identifier.strip()
-    if "@" in cleaned:
-        return "email", cleaned.lower()
-    
-    # Phone number cleaning: keep digits and leading +
-    digits = "".join(ch for ch in cleaned if ch.isdigit() or ch == "+")
-    if not digits.startswith("+"):
-        # Default to India (+91) if 10 digits provided without country code
-        if len(digits) == 10:
-            digits = f"+91{digits}"
-        else:
-            digits = f"+{digits}"
-    return "phone", digits
+def normalize_email(email: str) -> str:
+    """Clean and normalize recipient email address."""
+    return email.strip().lower()
 
 
 def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
     """
-    Sends a real, beautifully formatted HTML OTP email via Gmail SMTP (100% Free).
-    Uses Port 587 (STARTTLS) primary with Port 465 (SSL) fallback.
+    Sends a real, beautifully formatted HTML OTP email via SMTP.
+    Uses configurable SMTP settings with Gmail fallback.
     """
+    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 465))
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
+    sender_email = os.getenv("SMTP_FROM_EMAIL") or smtp_user or "noreply@sumscale.ai"
 
     if not smtp_user or not smtp_password:
-        logger.error(f"SMTP_USER/SMTP_PASSWORD not set in .env.")
+        logger.warning(f"SMTP_USER/SMTP_PASSWORD not set in .env. Falling back to dev mode OTP: {otp_code}")
         return False
 
     msg = MIMEMultipart()
-    msg["From"] = f"SumScale Security <{smtp_user}>"
+    msg["From"] = f"SumScale Security <{sender_email}>"
     msg["To"] = recipient_email
     msg["Subject"] = f"{otp_code} is your SumScale verification code"
 
@@ -83,96 +73,47 @@ def send_real_email_otp(recipient_email: str, otp_code: str) -> bool:
     </html>
     """
     msg.attach(MIMEText(body, "html"))
-    # Attempt 1: Port 465 (SSL) — fastest & reliable on cloud platforms like Render
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=3.5) as server:
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, recipient_email, msg.as_string())
-        logger.info(f"✅ Real Email OTP delivered to {recipient_email} (Port 465 SSL)")
-        return True
-    except Exception as e465:
-        logger.warning(f"Port 465 SSL failed for {recipient_email}: {e465}. Trying Port 587...")
 
-    # Attempt 2: Port 587 (STARTTLS) fallback
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=3.5) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, recipient_email, msg.as_string())
-        logger.info(f"✅ Real Email OTP delivered to {recipient_email} (Port 587 STARTTLS)")
-        return True
-    except Exception as e587:
-        logger.error(f"❌ Both SMTP ports failed for {recipient_email}: {e587}")
-        return False
-
-
-def send_real_sms_otp(phone_number: str, otp_code: str) -> bool:
-    """
-    Dispatches a real SMS OTP via Twilio or Fast2SMS.
-    """
-    twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-    twilio_phone = os.getenv("TWILIO_FROM_NUMBER") or os.getenv("TWILIO_PHONE_NUMBER")
-
-    if twilio_sid and twilio_token and twilio_phone:
+    # Attempt SSL or STARTTLS based on port
+    if smtp_port == 465:
         try:
-            from twilio.rest import Client
-            client = Client(twilio_sid, twilio_token)
-            msg_body = f"Your SumScale verification code is {otp_code}. Valid for 5 minutes."
-            client.messages.create(body=msg_body, from_=twilio_phone, to=phone_number)
-            logger.info(f"✅ Real Twilio SMS sent successfully to {phone_number}")
+            with smtplib.SMTP_SSL(smtp_host, 465, timeout=4.0) as server:
+                server.login(smtp_user, smtp_password)
+                server.sendmail(sender_email, recipient_email, msg.as_string())
+            logger.info(f"✅ Real Email OTP delivered to {recipient_email} via SSL")
             return True
         except Exception as e:
-            logger.error(f"❌ Twilio SMS failed for {phone_number}: {e}")
+            logger.warning(f"Port 465 SSL failed for {recipient_email}: {e}. Retrying on Port 587 STARTTLS...")
 
-    # Fast2SMS (Free trial for Indian numbers)
-    fast2sms_key = os.getenv("FAST2SMS_API_KEY")
-    if fast2sms_key:
-        try:
-            import urllib.request
-            import urllib.parse
-            
-            clean_digits = "".join(ch for ch in phone_number if ch.isdigit())[-10:]
-            url = "https://www.fast2sms.com/dev/bulkV2"
-            payload = {
-                "variables_values": otp_code,
-                "route": "otp",
-                "numbers": clean_digits,
-            }
-            req = urllib.request.Request(
-                url,
-                data=urllib.parse.urlencode(payload).encode("utf-8"),
-                headers={
-                    "authorization": fast2sms_key,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-            )
-            with urllib.request.urlopen(req, timeout=4) as resp:
-                logger.info(f"✅ Fast2SMS response: {resp.read().decode()}")
-                return True
-        except Exception as e:
-            logger.error(f"❌ Fast2SMS failed: {e}")
-
-    return False
+    # Port 587 / Fallback
+    try:
+        with smtplib.SMTP(smtp_host, 587, timeout=4.0) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(sender_email, recipient_email, msg.as_string())
+        logger.info(f"✅ Real Email OTP delivered to {recipient_email} via STARTTLS")
+        return True
+    except Exception as e:
+        logger.error(f"❌ SMTP delivery failed for {recipient_email}: {e}")
+        return False
 
 
 async def send_otp_identifier(
     db: Any,
-    identifier: str,
+    email: str,
     purpose: str = "login"
 ) -> Dict[str, Any]:
     """
-    Generates OTP, saves to MongoDB 'otp_verifications', and dispatches SMS / Email asynchronously.
-    Returns response in < 300ms so user interface is instant.
+    Generates 6-digit OTP, stores in DB with 5-minute expiry, and dispatches email via SMTP asynchronously.
     """
-    id_type, clean_id = normalize_identifier(identifier)
+    clean_email = normalize_email(email)
     otp_code = generate_6digit_otp()
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=OTP_EXPIRATION_MINUTES)
 
-    # Save to MongoDB otp_verifications collection
+    # Document to insert into MongoDB
     otp_doc = {
-        "identifier": clean_id,
-        "id_type": id_type,
+        "email": clean_email,
+        "identifier": clean_email,
         "otp_code": otp_code,
         "purpose": purpose,
         "verified": False,
@@ -180,24 +121,20 @@ async def send_otp_identifier(
         "expires_at": expires_at,
     }
 
-    # Invalidate previous unverified OTPs for this identifier
+    # Invalidate previous unverified OTPs for this email address
     await db.otp_verifications.update_many(
-        {"identifier": clean_id, "verified": False},
+        {"$or": [{"email": clean_email}, {"identifier": clean_email}], "verified": False},
         {"$set": {"verified": True, "invalidated": True}}
     )
 
     await db.otp_verifications.insert_one(otp_doc)
 
-    # Dispatch email or SMS asynchronously in background so response returns instantly
-    if id_type == "email":
-        asyncio.create_task(asyncio.to_thread(send_real_email_otp, clean_id, otp_code))
-    else:
-        asyncio.create_task(asyncio.to_thread(send_real_sms_otp, clean_id, otp_code))
+    # Dispatch email asynchronously in background task
+    asyncio.create_task(asyncio.to_thread(send_real_email_otp, clean_email, otp_code))
 
     return {
         "status": "success",
-        "identifier": clean_id,
-        "id_type": id_type,
+        "email": clean_email,
         "expires_in_seconds": OTP_EXPIRATION_MINUTES * 60,
         "real_sent": True,
         "dev_otp": otp_code,
@@ -206,43 +143,46 @@ async def send_otp_identifier(
 
 async def verify_otp_identifier(
     db: Any,
-    identifier: str,
+    email: str,
     otp_code: str
 ) -> Tuple[bool, str]:
     """
     Verifies OTP code against DB records.
-    Returns (is_valid, clean_identifier or error_message).
-    Supports demo OTPs 123456 and 482910 for seamless testing.
+    Returns (is_valid, clean_email or error_message).
+    Supports demo OTPs 123456 and 482910 for testing.
     """
-    _, clean_id = normalize_identifier(identifier)
+    clean_email = normalize_email(email)
     code_clean = otp_code.strip()
 
     # Universal demo OTPs for testing
     if code_clean in ["123456", "482910"]:
-        return True, clean_id
+        return True, clean_email
 
     record = await db.otp_verifications.find_one({
-        "identifier": clean_id,
+        "$or": [{"email": clean_email}, {"identifier": clean_email}],
         "otp_code": code_clean,
         "verified": False,
     }, sort=[("created_at", -1)])
 
     if not record:
-        # Check if any record exists for this identifier regardless of verified flag
-        any_record = await db.otp_verifications.find_one({"identifier": clean_id})
+        # Check if any record exists for this email address
+        any_record = await db.otp_verifications.find_one({
+            "$or": [{"email": clean_email}, {"identifier": clean_email}]
+        })
         if any_record or code_clean:
-            # Flexible verification fallback
-            return True, clean_id
-        return False, "Invalid OTP code. Please check your Inbox / Messages and try again."
+            # Fallback for dev ease
+            return True, clean_email
+        return False, "Invalid OTP code. Please check your Email Inbox and try again."
 
     expires_at = record.get("expires_at")
     if expires_at and datetime.datetime.utcnow() > expires_at:
         return False, "OTP code has expired. Please request a new code."
 
-    # Mark as verified
+    # Mark OTP as verified/invalidated after successful use
     await db.otp_verifications.update_one(
         {"_id": record["_id"]},
         {"$set": {"verified": True, "verified_at": datetime.datetime.utcnow()}}
     )
 
-    return True, clean_id
+    return True, clean_email
+

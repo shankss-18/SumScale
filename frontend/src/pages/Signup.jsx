@@ -35,8 +35,8 @@ const Signup = () => {
   const handleSendOTP = async (e) => {
     e?.preventDefault();
     setLocalError('');
-    if (!identifier.trim()) {
-      setLocalError('Please enter your mobile phone number or email address.');
+    if (!identifier.trim() || !identifier.includes('@')) {
+      setLocalError('Please enter a valid email address.');
       return;
     }
     setSendingOtp(true);
@@ -92,7 +92,7 @@ const Signup = () => {
 
             {/* Bottom Tag */}
             <div className="relative z-10 text-[10px] text-white/70 font-semibold tracking-wider uppercase text-center">
-              Create Account with Mobile or Email OTP
+              Create Account with Email OTP
             </div>
           </div>
 
@@ -108,7 +108,7 @@ const Signup = () => {
                 <div className="space-y-1.5 pt-1 text-xs text-slate-600 font-medium">
                   <div className="flex items-center space-x-2">
                     <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">✓</span>
-                    <span>100% Free OTP Sign Up (No Password Needed)</span>
+                    <span>100% Free Email OTP Sign Up (No Password Needed)</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">✓</span>
@@ -128,14 +128,14 @@ const Signup = () => {
                 <form onSubmit={handleSendOTP} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Mobile Phone Number or Email Address
+                      Email Address
                     </label>
                     <input
-                      type="text"
+                      type="email"
                       required
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="e.g. +91 95509 60744 or name@example.com"
+                      placeholder="e.g. name@example.com"
                       className="w-full px-4 py-3 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all font-medium"
                     />
                   </div>
@@ -148,7 +148,7 @@ const Signup = () => {
                     {sendingOtp ? (
                       <span>Sending OTP Verification Code...</span>
                     ) : (
-                      <span>Send OTP Code via SMS / Email →</span>
+                      <span>Send OTP Code via Email →</span>
                     )}
                   </button>
                 </form>
@@ -161,7 +161,7 @@ const Signup = () => {
                       <span>Verification Code Sent!</span>
                     </p>
                     <p className="text-[10px] text-emerald-700">
-                      Check your Email Inbox or Mobile SMS. (Testing OTP: <span className="font-extrabold underline">123456</span>)
+                      Check your Email Inbox. (Testing OTP: <span className="font-extrabold underline">123456</span>)
                     </p>
                   </div>
 
@@ -202,7 +202,7 @@ const Signup = () => {
                       }}
                       className="text-slate-500 hover:text-slate-800 font-medium"
                     >
-                      ← Change Phone / Email
+                      ← Change Email Address
                     </button>
 
                     <button

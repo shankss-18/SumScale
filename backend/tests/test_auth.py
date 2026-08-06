@@ -192,3 +192,29 @@ async def test_login_rate_limiting(client):
     if hasattr(app.state, "limiter"):
         app.state.limiter.enabled = False
 
+
+@pytest.mark.asyncio
+async def test_send_and_verify_email_otp_success(client):
+    """Test sending 6-digit email OTP and verifying it to issue JWT token."""
+    send_res = await client.post(
+        "/auth/send-otp",
+        json={"email": "otpuser@example.com", "purpose": "login"},
+    )
+    assert send_res.status_code == 200
+    body = send_res.json()
+    assert body["status"] == "success"
+    assert body["email"] == "otpuser@example.com"
+    assert "dev_otp" in body
+
+    dev_otp = body["dev_otp"]
+
+    verify_res = await client.post(
+        "/auth/verify-otp",
+        json={"email": "otpuser@example.com", "otp_code": dev_otp},
+    )
+    assert verify_res.status_code == 200
+    v_body = verify_res.json()
+    assert "access_token" in v_body
+    assert "refresh_token" in v_body
+
+

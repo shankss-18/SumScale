@@ -56,17 +56,17 @@ apiClient.interceptors.response.use(
 );
 
 // --- Auth Endpoints ---
-export const apiRegister = (email, password, phoneNumber = null) =>
-  apiClient.post('/auth/register', { email, password, phone_number: phoneNumber });
+export const apiRegister = (email, password) =>
+  apiClient.post('/auth/register', { email, password });
 
-export const apiLogin = (emailOrPhone, password) =>
-  apiClient.post('/auth/login', { email: emailOrPhone, password });
+export const apiLogin = (email, password) =>
+  apiClient.post('/auth/login', { email, password });
 
-export const apiSendOTP = (identifier, purpose = 'login') =>
-  apiClient.post('/auth/send-otp', { identifier, purpose });
+export const apiSendOTP = (email, purpose = 'login') =>
+  apiClient.post('/auth/send-otp', { email, purpose });
 
-export const apiVerifyOTP = (identifier, otpCode, fullName = null) =>
-  apiClient.post('/auth/verify-otp', { identifier, otp_code: otpCode, full_name: fullName });
+export const apiVerifyOTP = (email, otpCode, fullName = null) =>
+  apiClient.post('/auth/verify-otp', { email, otp_code: otpCode, full_name: fullName });
 
 export const apiGetMe = () => apiClient.get('/auth/me');
 
