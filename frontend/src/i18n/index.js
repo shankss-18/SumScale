@@ -88,7 +88,7 @@ const resources = {
         analyzing: 'Analyzing Document with AI Engine...',
       },
       chat: {
-        floatingBtn: '✨ Ask AI',
+        floatingBtn: 'Ask AI',
         title: 'Document Copilot Chat',
         promptsLabel: 'PROMPTS:',
         placeholder: 'Ask questions or attach files to analyze...',
@@ -217,7 +217,7 @@ const resources = {
         analyzing: 'AI इंजन द्वारा विश्लेषण किया जा रहा है...',
       },
       chat: {
-        floatingBtn: '✨ AI से पूछें',
+        floatingBtn: 'AI से पूछें',
         title: 'डॉक्यूमेंट कोपायलट चैट',
         promptsLabel: 'सुझाव:',
         placeholder: 'प्रश्न पूछें या फ़ाइलें संलग्न करें...',
@@ -345,7 +345,7 @@ const resources = {
         analyzing: 'AI విశ్లేషిస్తోంది...',
       },
       chat: {
-        floatingBtn: '✨ AI ని అడగండి',
+        floatingBtn: 'AI ని అడగండి',
         title: 'డాక్యుమెంట్ కోపైలట్ చాట్',
         promptsLabel: 'సూచనలు:',
         placeholder: 'ప్రశ్నలు అడగండి లేదా ఫైళ్లను జత చేయండి...',
@@ -469,7 +469,7 @@ const resources = {
         analyzing: 'AI பகுப்பாய்வு செய்கிறது...',
       },
       chat: {
-        floatingBtn: '✨ AI ஐக் கேட்க',
+        floatingBtn: 'AI ஐக் கேட்க',
         title: 'ஆவண கோபைலட் அரட்டை',
         promptsLabel: 'பரிந்துரைகள்:',
         placeholder: 'கேள்விகளைக் கேட்கவும் அல்லது கோப்புகளை இணைக்கவும்...',
@@ -593,7 +593,7 @@ const resources = {
         analyzing: 'AI ವಿಶ್ಲೇಷಿಸುತ್ತಿದೆ...',
       },
       chat: {
-        floatingBtn: '✨ AI ಕೇಳಿ',
+        floatingBtn: 'AI ಕೇಳಿ',
         title: 'ದಾಖಲೆ ಕೊಪೈಲಟ್ ಚಾಟ್',
         promptsLabel: 'ಸಲಹೆಗಳು:',
         placeholder: 'ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ ಅಥವಾ ಫೈಲ್‌ಗಳನ್ನು ಲಗತ್ತಿಸಿ...',
