@@ -55,7 +55,23 @@ const LandingPage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const heroRef = useHeroEntrance();
-  useScrollReveal(); // wires IntersectionObserver to all [data-reveal] elements
+  const scrollHintRef = useRef(null);
+  useScrollReveal();
+
+  // Fade 'scroll to explore' out as user scrolls down
+  useEffect(() => {
+    const el = scrollHintRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const y = window.scrollY;
+      // fully visible at 0px, fully invisible at 120px
+      const op = Math.max(0, 1 - y / 120);
+      el.style.opacity  = op;
+      el.style.transform = `translateY(${y * 0.25}px)`;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#EDF6F9] text-slate-800 flex flex-col font-sans antialiased">
@@ -120,11 +136,7 @@ const LandingPage = () => {
           animation: hero-ping 2s cubic-bezier(0,0,0.2,1) infinite;
         }
 
-        /* ── Shimmer on CTA button ── */
-        @keyframes btn-shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
+        /* ── Smooth CTA button hover ── */
         .btn-shimmer {
           background: linear-gradient(
             90deg,
@@ -132,6 +144,32 @@ const LandingPage = () => {
           );
           background-size: 200% auto;
           animation: btn-shimmer 3.5s linear infinite;
+          transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+                      box-shadow 0.28s ease,
+                      filter 0.28s ease;
+        }
+        .btn-shimmer:hover {
+          transform: translateY(-3px) scale(1.04);
+          box-shadow: 0 12px 36px -6px rgba(0,109,119,0.40);
+          filter: brightness(1.08);
+        }
+        .btn-shimmer:active { transform: scale(0.97); }
+
+        .btn-outline {
+          transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+                      box-shadow 0.28s ease,
+                      background-color 0.22s ease;
+        }
+        .btn-outline:hover {
+          transform: translateY(-3px) scale(1.04);
+          box-shadow: 0 10px 30px -6px rgba(0,109,119,0.20);
+        }
+        .btn-outline:active { transform: scale(0.97); }
+
+        /* ── Scroll hint ── */
+        .scroll-hint {
+          will-change: opacity, transform;
+          transition: opacity 0.1s linear;
         }
       `}</style>
 
@@ -195,10 +233,9 @@ const LandingPage = () => {
                   {t('nav.uploadBtn')} <span className="text-base">→</span>
                 </Link>
                 <Link to="/dashboard"
-                      className="bg-white/90 border border-[#83C5BE] text-[#006D77]
+                      className="btn-outline bg-white/90 border border-[#83C5BE] text-[#006D77]
                                  hover:bg-[#EDF6F9] rounded-full px-9 py-4 text-sm
-                                 font-extrabold transition-all shadow-sm
-                                 hover:scale-105 active:scale-95">
+                                 font-extrabold shadow-sm">
                   {t('nav.dashboard')}
                 </Link>
               </>
@@ -212,18 +249,21 @@ const LandingPage = () => {
                   {t('nav.signIn')} <span className="text-base">→</span>
                 </Link>
                 <Link to="/signup"
-                      className="bg-white/90 border border-[#83C5BE] text-[#006D77]
+                      className="btn-outline bg-white/90 border border-[#83C5BE] text-[#006D77]
                                  hover:bg-[#EDF6F9] rounded-full px-9 py-4 text-sm
-                                 font-extrabold transition-all shadow-sm
-                                 hover:scale-105 active:scale-95">
+                                 font-extrabold shadow-sm">
                   {t('nav.register')}
                 </Link>
               </>
             )}
           </div>
 
-          {/* Scroll hint */}
-          <div data-hero className="flex flex-col items-center gap-1.5 pt-2 opacity-50">
+          {/* Scroll hint — fades out on scroll via ref */}
+          <div
+            ref={scrollHintRef}
+            className="scroll-hint flex flex-col items-center gap-1.5 pt-2"
+            style={{ opacity: 0.5 }}
+          >
             <span className="text-[10px] font-semibold text-[#006D77] uppercase tracking-widest">
               Scroll to explore
             </span>
