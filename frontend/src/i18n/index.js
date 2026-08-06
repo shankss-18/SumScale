@@ -17,6 +17,7 @@ const resources = {
       home: {
         badge: 'MULTIMODAL CAPABILITIES',
         heroTitle: 'Reach your data in any format',
+        scrollExplore: 'Scroll to explore',
         aboutBadge: 'About SumScale AI',
         aboutTitle: 'Solving Real-World Challenges with Multimodal Intelligence',
         aboutDesc: "SumScale AI was engineered to solve one of modern society's biggest bottlenecks: converting complex, unstructured real-world data—medical lab reports, handwritten records, and regional voice notes—into instant, reliable decision support.",
@@ -145,6 +146,10 @@ const resources = {
       home: {
         badge: 'मल्टीमॉडल क्षमताएं',
         heroTitle: 'किसी भी प्रारूप में अपने डेटा तक पहुंचें',
+        scrollExplore: 'खोजने के लिए नीचे स्क्रॉल करें',
+        aboutBadge: 'समस्केल AI के बारे में',
+        aboutTitle: 'मल्टीमॉडल इंटेलिजेंस के साथ वास्तविक दुनिया की चुनौतियों का समाधान',
+        aboutDesc: 'मेडिकल लैब रिपोर्ट, हस्तलिखित रिकॉर्ड और क्षेत्रीय वॉयस नोट्स जैसे जटिल डेटा को त्वरित, विश्वसनीय निर्णय सहायता में बदलने के लिए समस्केल AI तैयार किया गया था।',
         card1Title: 'भाषण और वॉयस नोट्स',
         card1Desc: 'अपने ब्राउज़र से लाइव वॉयस नोट्स रिकॉर्ड करें या तत्काल ट्रांसक्रिप्शन और AI विश्लेषण के लिए ऑडियो फ़ाइलें अपलोड करें।',
         card1b1: 'HTML5 लाइव माइक रिकॉर्डिंग',
@@ -398,6 +403,10 @@ const resources = {
       home: {
         badge: 'மல்டிமாடல் திறன்கள்',
         heroTitle: 'எந்த வடிவத்திலும் உங்கள் தரவை அணுகவும்',
+        scrollExplore: 'ஆராய கீழே ஸ்க்ரோல் செய்யவும்',
+        aboutBadge: 'சமஸ்கேல் AI பற்றி',
+        aboutTitle: 'பல்வேறு வடிவ நுண்ணறிவு மூலம் நிஜ உலக சவால்களுக்கு தீர்வு',
+        aboutDesc: 'மருத்துவ ஆய்வக அறிக்கைகள், கையால் எழுதப்பட்ட ஆவணங்கள் மற்றும் குரல் குறிப்புகள் போன்ற சிக்கலான தரவை உடனடி, நம்பகமான முடிவெடுக்கும் உதவியாக மாற்றுவதற்காக சமஸ்கேல் AI உருவாக்கப்பட்டது.',
         card1Title: 'பேச்சு மற்றும் குரல் குறிப்புகள்',
         card1Desc: 'உடனடி உரைபெயர்ப்பு மற்றும் AI பகுப்பாய்விற்கு குரல் குறிப்புகளைப் பதிவு செய்யவும் அல்லது ஆடியோ கோப்புகளைப் பதிவேற்றவும்.',
         card1b1: 'HTML5 நேரலை மைக்ரோஃபோன் பதிவு',
@@ -518,6 +527,10 @@ const resources = {
       home: {
         badge: 'ಮಲ್ಟಿಮೋಡಲ್ ಸಾಮರ್ಥ್ಯಗಳು',
         heroTitle: 'ಯಾವ ರೂಪದಲ್ಲಾದರೂ ನಿಮ್ಮ ಡೇಟಾವನ್ನು ಪಡೆಯಿರಿ',
+        scrollExplore: 'ಅನ್ವೇಷಿಸಲು ಕೆಳಗೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ',
+        aboutBadge: 'ಸಮ್‌ಸ್ಕೇಲ್ AI ಕುರಿತು',
+        aboutTitle: 'ಮಲ್ಟಿಮೋಡಲ್ ಬುದ್ಧಿವಂತಿಕೆಯೊಂದಿಗೆ ನೈಜ ಪ್ರಪಂಚದ ಸವಾಲುಗಳಿಗೆ ಪರಿಹಾರ',
+        aboutDesc: 'ವೈದ್ಯಕೀಯ ಲ್ಯಾಬ್ ವರದಿಗಳು, ಹಸ್ತಪ್ರತಿ ದಾಖಲೆಗಳು ಮತ್ತು ಪ್ರಾದೇಶಿಕ ಧ್ವನಿ ಟಿಪ್ಪಣಿಗಳಂತಹ ಸಂಕೀರ್ಣ ಡೇಟಾವನ್ನು ತಕ್ಷಣದ, ನಂಬಿಕಾರ್ಹ ನಿರ್ಧಾರ ಬೆಂಬಲವಾಗಿ ಪರಿವರ್ತಿಸಲು ಸಮ್‌ಸ್ಕೇಲ್ AI ಅನ್ನು ವಿನ್ಯಾಸಗೊಳಿಸಲಾಗಿದೆ.',
         card1Title: 'ಧ್ವನಿ ಮತ್ತು ವಾಯ್ಸ್ ನೋಟ್ಸ್',
         card1Desc: 'ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಿಂದ ನೇರ ಧ್ವನಿ ನೋಟ್‌ಗಳನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಿ ಅಥವಾ AI ವಿಶ್ಲೇಷಣೆಗಾಗಿ ಆಡಿಯೋ ಫೈಲ್‌ಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.',
         card1b1: 'HTML5 ಲೈವ್ ಮೈಕ್ರೋಫೋನ್ ರೆಕಾರ್ಡಿಂಗ್',

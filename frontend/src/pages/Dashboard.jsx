@@ -12,8 +12,24 @@ const RadialRingsChart = ({ slices }) => {
   const [hovered, setHovered] = useState(null);
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 200); return () => clearTimeout(t); }, []);
 
-  const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
+  const total = slices.reduce((s, sl) => s + sl.value, 0);
   const cx = 120; const cy = 120;
+
+  if (total === 0) {
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 w-full py-2">
+        <svg width="240" height="240" viewBox="0 0 240 240" className="shrink-0 drop-shadow-xs">
+          <circle cx={cx} cy={cy} r={94} fill="none" stroke="#EDF6F9" strokeWidth={14} />
+          <text x={cx} y={cy - 6} textAnchor="middle" fontSize="32" fontWeight="900" fill="#94a3b8">0</text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fontSize="10" fontWeight="800" fill="#94a3b8" letterSpacing="1.2">TOTAL DOCS</text>
+        </svg>
+        <div className="text-xs font-bold text-slate-400 sm:flex-1 text-center sm:text-left">
+          No document data yet
+        </div>
+      </div>
+    );
+  }
+
   const rings = slices.map((sl, i) => ({
     ...sl,
     radius: 94 - i * 22,
@@ -111,48 +127,6 @@ const RadialRingsChart = ({ slices }) => {
 
 /* ─── PLACEHOLDER so old DonutChart ref is gone ─── */
 const DonutChart = ({ slices }) => {
-  const size = 180;
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = 68;
-  const inner = 40;
-  const [hovered, setHovered] = useState(null);
-  const [animated, setAnimated] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setAnimated(true), 300);
-    return () => clearTimeout(t);
-  }, []);
-
-  const total = slices.reduce((s, sl) => s + sl.value, 0) || 1;
-  let cumulative = 0;
-
-  const paths = slices.map((sl, i) => {
-    const startAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
-    cumulative += sl.value;
-    const endAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
-
-    const x1 = cx + r * Math.cos(startAngle);
-    const y1 = cy + r * Math.sin(startAngle);
-    const x2 = cx + r * Math.cos(endAngle);
-    const y2 = cy + r * Math.sin(endAngle);
-    const xi1 = cx + inner * Math.cos(startAngle);
-    const yi1 = cy + inner * Math.sin(startAngle);
-    const xi2 = cx + inner * Math.cos(endAngle);
-    const yi2 = cy + inner * Math.sin(endAngle);
-    const large = sl.value / total > 0.5 ? 1 : 0;
-
-    const d = `M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${inner} ${inner} 0 ${large} 0 ${xi1} ${yi1} Z`;
-    const scale = hovered === i ? 1.06 : 1;
-    const midAngle = startAngle + (endAngle - startAngle) / 2;
-    const tx = cx + (r + 10) * Math.cos(midAngle) - cx;
-    const ty = cy + (r + 10) * Math.sin(midAngle) - cy;
-
-    return { d, sl, scale, tx, ty, i };
-  });
-
-  const hoveredSlice = hovered !== null ? slices[hovered] : null;
-
   return null;
 };
 
@@ -294,13 +268,13 @@ const Dashboard = () => {
     const f = c.findings?.escalation_flag || c.findings?.severity;
     return f === 'low' || (!f && c.findings);
   }).length;
-  const noFindings = total - highRisk - medRisk - lowRisk;
+  const noFindings = total > 0 ? (total - highRisk - medRisk - lowRisk) : 0;
 
   const pieSlices = [
-    { label: 'High Risk',  value: highRisk || 0,  color: '#e11d48', colorLight: '#fb7185' },
-    { label: 'Medium',     value: medRisk  || 0,  color: '#d97706', colorLight: '#fbbf24' },
-    { label: 'Low Risk',   value: lowRisk  || 0,  color: '#006D77', colorLight: '#83C5BE' },
-    { label: 'Pending',    value: noFindings > 0 ? noFindings : (total === 0 ? 1 : 0), color: '#94a3b8', colorLight: '#cbd5e1' },
+    { label: t('dashboard.highRisk'),  value: highRisk || 0,  color: '#e11d48', colorLight: '#fb7185' },
+    { label: t('dashboard.mediumRisk'),value: medRisk  || 0,  color: '#d97706', colorLight: '#fbbf24' },
+    { label: t('dashboard.lowRisk'),   value: lowRisk  || 0,  color: '#006D77', colorLight: '#83C5BE' },
+    { label: 'Pending',    value: noFindings > 0 ? noFindings : 0, color: '#94a3b8', colorLight: '#cbd5e1' },
   ].filter(s => s.value > 0);
 
   /* ─── Filtered docs ─── */

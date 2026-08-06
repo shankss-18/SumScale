@@ -281,7 +281,7 @@ const LandingPage = () => {
             style={{ opacity: 0.5 }}
           >
             <span className="text-[10px] font-semibold text-[#006D77] uppercase tracking-widest">
-              Scroll to explore
+              {t('home.scrollExplore', 'Scroll to explore')}
             </span>
             <svg width="16" height="24" viewBox="0 0 16 24" fill="none"
                  className="text-[#006D77] animate-bounce">
