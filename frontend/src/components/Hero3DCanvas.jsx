@@ -2,10 +2,8 @@ import React, { useEffect, useRef } from 'react';
 
 /**
  * Hero3DCanvas — Premium 3D Interactive Background
- * - Dual-layer system: deep aurora field + foreground neural constellation
- * - Flowing data streams connecting orbiting nodes
- * - Mouse parallax tilt + cursor repulsion field
- * - Self-contained, zero dependencies
+ * Fixed: uses window dimensions + ResizeObserver for reliable sizing
+ * Features: Aurora field, Fibonacci sphere, 3 orbiting data rings, mouse parallax
  */
 export default function Hero3DCanvas() {
   const canvasRef = useRef(null);
@@ -16,314 +14,268 @@ export default function Hero3DCanvas() {
     const ctx = canvas.getContext('2d');
     let raf;
 
-    const resize = () => {
-      canvas.width  = canvas.parentElement?.clientWidth  || window.innerWidth;
-      canvas.height = canvas.parentElement?.clientHeight || window.innerHeight;
+    // ── Reliable sizing: always use canvas's bounding rect ─────────
+    const setSize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = rect.width  || window.innerWidth;
+      canvas.height = rect.height || window.innerHeight;
     };
-    resize();
-    window.addEventListener('resize', resize);
+    setSize();
 
-    // ── Mouse state ────────────────────────────────────────────────
-    let mx = 0, my = 0;
-    let rotX = 0, rotY = 0;
+    // ResizeObserver keeps canvas in sync as section reflows
+    const ro = new ResizeObserver(setSize);
+    ro.observe(canvas);
+
+    // ── Mouse tracking ──────────────────────────────────────────────
+    let mx = canvas.width / 2;
+    let my = canvas.height / 2;
     let tRotX = 0, tRotY = 0;
+    let rotX  = 0, rotY  = 0;
+
     const onMove = (e) => {
-      const r = canvas.getBoundingClientRect();
-      mx = e.clientX - r.left;
-      my = e.clientY - r.top;
-      tRotY =  ((mx - canvas.width  / 2) / canvas.width)  * 1.4;
-      tRotX = -((my - canvas.height / 2) / canvas.height) * 1.0;
+      mx = e.clientX;
+      my = e.clientY;
+      tRotY =  ((e.clientX - canvas.width  / 2) / canvas.width)  * 1.6;
+      tRotX = -((e.clientY - canvas.height / 2) / canvas.height) * 1.0;
     };
     window.addEventListener('mousemove', onMove);
 
-    // ── Colour palette ─────────────────────────────────────────────
-    const C = {
-      deep:    '#006D77',
-      mid:     '#83C5BE',
-      light:   '#EDF6F9',
-      accent:  '#52B788',
+    // ── Helpers ─────────────────────────────────────────────────────
+    const FOV = 500;
+    const proj = (x, y, z, cx, cy) => {
+      const s = FOV / (FOV + z + 400);
+      return { sx: cx + x * s, sy: cy + y * s, s };
     };
 
-    // ── Helper: project 3-D point to 2-D screen ────────────────────
-    const FOV = 480;
-    const project = (x, y, z, cx, cy) => {
-      const s = FOV / (FOV + z + 350);
-      return { sx: cx + x * s, sy: cy + y * s, scale: s };
-    };
-
-    // ═══════════════════════════════════════════════════════════════
-    // LAYER 1: Deep aurora wave-field (large slow blobs)
-    // ═══════════════════════════════════════════════════════════════
-    const blobs = Array.from({ length: 6 }, (_, i) => ({
-      x: Math.random(),
-      y: Math.random(),
-      r: 0.28 + Math.random() * 0.22,
-      dx: (Math.random() - 0.5) * 0.00025,
-      dy: (Math.random() - 0.5) * 0.00015,
-      hue: [186, 172, 155, 145, 195, 165][i],
-    }));
-
-    // ═══════════════════════════════════════════════════════════════
-    // LAYER 2: 3-D Particle Sphere — Fibonacci lattice
-    // ═══════════════════════════════════════════════════════════════
-    const N = 90;
-    const R = () => Math.min(canvas.width, canvas.height) * 0.34;
-    const PHI = Math.PI * (3 - Math.sqrt(5));
-    let pts = [];
-    for (let i = 0; i < N; i++) {
-      const y = 1 - (i / (N - 1)) * 2;
-      const ry = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = PHI * i;
-      pts.push({
-        bx: Math.cos(theta) * ry,
-        by: y,
-        bz: Math.sin(theta) * ry,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.018 + Math.random() * 0.02,
-        size:  1.4 + Math.random() * 1.6,
-      });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // LAYER 3: Orbiting data-stream rings (3 rings)
-    // ═══════════════════════════════════════════════════════════════
-    const RINGS = [
-      { axis: [1, 0.3, 0],  r: 0.62, speed: 0.006, particles: 22, phase: 0,           col: C.deep  },
-      { axis: [0.2, 1, 0.5],r: 0.82, speed: -0.004, particles: 18, phase: Math.PI/3,  col: C.mid   },
-      { axis: [0.5, 0.2, 1],r: 0.72, speed: 0.005,  particles: 16, phase: Math.PI*0.8,col: C.accent},
+    const rotY3 = ([x, y, z], a) => [
+      x * Math.cos(a) - z * Math.sin(a), y,
+      z * Math.cos(a) + x * Math.sin(a),
     ];
-    const ringPts = RINGS.map(ring =>
-      Array.from({ length: ring.particles }, (_, i) => ({
-        angle: ring.phase + (i / ring.particles) * Math.PI * 2,
-        size: 1.2 + Math.random() * 1.8,
-        phase: Math.random() * Math.PI * 2,
-      }))
-    );
-
-    // Normalise an axis vector
-    const norm = ([x, y, z]) => {
-      const m = Math.sqrt(x*x + y*y + z*z);
+    const rotX3 = ([x, y, z], a) => [
+      x, y * Math.cos(a) - z * Math.sin(a),
+      z * Math.cos(a) + y * Math.sin(a),
+    ];
+    const norm3 = ([x, y, z]) => {
+      const m = Math.sqrt(x*x+y*y+z*z) || 1;
       return [x/m, y/m, z/m];
     };
 
-    // Rotate point p around normalised axis n by angle θ (Rodrigues)
-    const rodrigues = ([px, py, pz], [nx, ny, nz], theta) => {
-      const cos = Math.cos(theta), sin = Math.sin(theta);
-      const dot = px*nx + py*ny + pz*nz;
-      return [
-        px*cos + (ny*pz - nz*py)*sin + nx*dot*(1-cos),
-        py*cos + (nz*px - nx*pz)*sin + ny*dot*(1-cos),
-        pz*cos + (nx*py - ny*px)*sin + nz*dot*(1-cos),
+    // ── LAYER 1: Aurora blobs ───────────────────────────────────────
+    const blobs = Array.from({ length: 7 }, (_, i) => ({
+      x:   Math.random(),
+      y:   Math.random(),
+      r:   0.30 + Math.random() * 0.25,
+      dx:  (Math.random() - 0.5) * 0.0003,
+      dy:  (Math.random() - 0.5) * 0.0002,
+      hue: [186, 172, 160, 150, 195, 175, 165][i],
+      sat: 40 + Math.random() * 20,
+    }));
+
+    // ── LAYER 2: Fibonacci sphere ───────────────────────────────────
+    const N = 110;
+    const PHI = Math.PI * (3 - Math.sqrt(5));
+    const pts = Array.from({ length: N }, (_, i) => {
+      const y = 1 - (i / (N - 1)) * 2;
+      const ry = Math.sqrt(Math.max(0, 1 - y * y));
+      const t  = PHI * i;
+      return {
+        bx: Math.cos(t) * ry,
+        by: y,
+        bz: Math.sin(t) * ry,
+        phase: Math.random() * Math.PI * 2,
+        size:  1.8 + Math.random() * 2.0,
+      };
+    });
+
+    // ── LAYER 3: Three orbiting rings ──────────────────────────────
+    const RINGS = [
+      { ax: [1, 0.4, 0.1], rFrac: 0.58, spd:  0.007,  n: 24, col: [0,  109, 119] },
+      { ax: [0.3, 1, 0.6], rFrac: 0.80, spd: -0.005,  n: 20, col: [131,197, 190] },
+      { ax: [0.6, 0.2, 1], rFrac: 0.70, spd:  0.006,  n: 18, col: [82, 183, 136] },
+    ];
+    const ringData = RINGS.map((ring) => {
+      const axis = norm3(ring.ax);
+      // perpendicular basis vectors for the ring plane
+      const t = Math.abs(axis[0]) < 0.9 ? [1,0,0] : [0,1,0];
+      const p1 = norm3([
+        axis[1]*t[2] - axis[2]*t[1],
+        axis[2]*t[0] - axis[0]*t[2],
+        axis[0]*t[1] - axis[1]*t[0],
+      ]);
+      const p2 = [
+        axis[1]*p1[2] - axis[2]*p1[1],
+        axis[2]*p1[0] - axis[0]*p1[2],
+        axis[0]*p1[1] - axis[1]*p1[0],
       ];
-    };
+      return {
+        ...ring, axis, p1, p2,
+        angles: Array.from({ length: ring.n }, (_, i) => ({
+          a:     (i / ring.n) * Math.PI * 2 + Math.random() * 0.5,
+          phase: Math.random() * Math.PI * 2,
+          sz:    1.4 + Math.random() * 2.0,
+        })),
+      };
+    });
 
-    // ── Y-axis rotation matrix ──────────────────────────────────────
-    let globalAngleY = 0;
-    let globalAngleX = 0;
+    // ── Globals ─────────────────────────────────────────────────────
+    let gY = 0, gX = 0;
+    let t  = 0;
 
-    const rotateY = ([x, y, z], a) => [
-      x * Math.cos(a) - z * Math.sin(a),
-      y,
-      z * Math.cos(a) + x * Math.sin(a),
-    ];
-    const rotateX = ([x, y, z], a) => [
-      x,
-      y * Math.cos(a) - z * Math.sin(a),
-      z * Math.cos(a) + y * Math.sin(a),
-    ];
+    // ── Render loop ─────────────────────────────────────────────────
+    const render = () => {
+      t += 0.014;
+      const W = canvas.width, H = canvas.height;
+      if (W === 0 || H === 0) { raf = requestAnimationFrame(render); return; }
 
-    let t = 0;
+      const cx = W / 2, cy = H / 2;
+      const SPHERE_R = Math.min(W, H) * 0.36;
 
-    // ── Draw aurora layer ───────────────────────────────────────────
-    const drawAurora = () => {
-      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Smooth rotation toward mouse
+      rotX += (tRotX - rotX) * 0.045;
+      rotY += (tRotY - rotY) * 0.045;
+      gY   += 0.004 + rotY * 0.01;
+      gX   += 0.0008 + rotX * 0.006;
+
+      const cosGY = Math.cos(gY), sinGY = Math.sin(gY);
+      const cosGX = Math.cos(gX), sinGX = Math.sin(gX);
+
+      // ── Aurora ──────────────────────────────────────────────────
       blobs.forEach(b => {
         b.x += b.dx; b.y += b.dy;
         if (b.x < 0 || b.x > 1) b.dx *= -1;
         if (b.y < 0 || b.y > 1) b.dy *= -1;
-
-        const grd = ctx.createRadialGradient(
-          b.x * w, b.y * h, 0,
-          b.x * w, b.y * h, b.r * Math.max(w, h)
+        const g = ctx.createRadialGradient(
+          b.x*W, b.y*H, 0,
+          b.x*W, b.y*H, b.r * Math.max(W,H)
         );
-        grd.addColorStop(0, `hsla(${b.hue},55%,52%,0.13)`);
-        grd.addColorStop(0.5, `hsla(${b.hue},45%,60%,0.06)`);
-        grd.addColorStop(1, 'transparent');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
+        g.addColorStop(0,   `hsla(${b.hue},${b.sat}%,56%,0.16)`);
+        g.addColorStop(0.5, `hsla(${b.hue},${b.sat}%,60%,0.07)`);
+        g.addColorStop(1,   'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
       });
-    };
 
-    // ── Main render loop ────────────────────────────────────────────
-    const render = () => {
-      t += 0.012;
-      const w = canvas.width, h = canvas.height;
-      const cx = w / 2, cy = h / 2;
-      const radius = R();
+      // ── Scanline sweep ──────────────────────────────────────────
+      const sy = ((Math.sin(t * 0.35) + 1) / 2) * H;
+      const sg = ctx.createLinearGradient(0, sy - 100, 0, sy + 100);
+      sg.addColorStop(0,   'transparent');
+      sg.addColorStop(0.5, 'rgba(131,197,190,0.06)');
+      sg.addColorStop(1,   'transparent');
+      ctx.fillStyle = sg;
+      ctx.fillRect(0, 0, W, H);
 
-      ctx.clearRect(0, 0, w, h);
-
-      // Smooth mouse tracking
-      rotX += (tRotX - rotX) * 0.04;
-      rotY += (tRotY - rotY) * 0.04;
-      globalAngleY += 0.004 + rotY * 0.008;
-      globalAngleX += 0.0008 + rotX * 0.005;
-
-      // ── Aurora background ─────────────────────────────────────────
-      drawAurora();
-
-      // ── Rotating scan-line effect (horizontal aurora sweep) ────────
-      const scanGrd = ctx.createLinearGradient(0, 0, 0, h);
-      const scanY = ((Math.sin(t * 0.4) + 1) / 2) * h;
-      scanGrd.addColorStop(Math.max(0, (scanY - 80) / h), 'transparent');
-      scanGrd.addColorStop(scanY / h,  'rgba(131,197,190,0.05)');
-      scanGrd.addColorStop(Math.min(1, (scanY + 80) / h), 'transparent');
-      ctx.fillStyle = scanGrd;
-      ctx.fillRect(0, 0, w, h);
-
-      // ══════════════════════════════════════════════════════════════
-      // Project sphere particles
-      // ══════════════════════════════════════════════════════════════
+      // ── Project sphere ──────────────────────────────────────────
       const projected = pts.map(p => {
-        p.phase += p.speed * 0.18;
-        let [x, y, z] = [p.bx * radius, p.by * radius, p.bz * radius];
+        p.phase += 0.025;
 
-        // Apply global rotation
-        ;[x, y, z] = rotateY([x, y, z], globalAngleY);
-        ;[x, y, z] = rotateX([x, y, z], globalAngleX);
+        let [x, y, z] = [p.bx * SPHERE_R, p.by * SPHERE_R, p.bz * SPHERE_R];
+        // Y rotation
+        const nx = x * cosGY - z * sinGY;
+        const nz = z * cosGY + x * sinGY;
+        // X rotation
+        const ny = y * cosGX - nz * sinGX;
+        const nz2 = nz * cosGX + y * sinGX;
 
-        // Mouse repulsion
-        const dx = x - (mx - cx), dy = y - (my - cy);
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 100) {
-          const f = (100 - d) / 100;
-          x += (dx / (d || 1)) * f * 18;
-          y += (dy / (d || 1)) * f * 18;
+        // Mouse repulsion (screen-space)
+        const { sx: px0, sy: py0 } = proj(nx, ny, nz2, cx, cy);
+        const ddx = px0 - mx, ddy = py0 - my;
+        const dd = Math.sqrt(ddx*ddx + ddy*ddy);
+        let fx = nx, fy = ny;
+        if (dd < 130) {
+          const f = (130 - dd) / 130;
+          fx += (ddx / (dd || 1)) * f * 22;
+          fy += (ddy / (dd || 1)) * f * 22;
         }
 
-        const { sx, sy, scale } = project(x, y, z, cx, cy);
-        return { sx, sy, z, scale, phase: p.phase, size: p.size * scale };
+        const { sx, sy: sy2, s } = proj(fx, fy, nz2, cx, cy);
+        const depth = (nz2 / SPHERE_R + 1) / 2;
+        return { sx, sy: sy2, z: nz2, s, depth, phase: p.phase, size: p.size * s };
       });
 
-      // ── Draw neural web lines (depth-attenuated) ──────────────────
+      // Neural web lines
+      ctx.lineWidth = 0.7;
       for (let i = 0; i < projected.length; i++) {
+        const a = projected[i];
         for (let j = i + 1; j < projected.length; j++) {
-          const a = projected[i], b = projected[j];
+          const b = projected[j];
           const dx = a.sx - b.sx, dy = a.sy - b.sy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > 70) continue;
-
-          const alpha = (1 - dist / 70) * 0.18 * Math.min(a.scale, b.scale) * 1.8;
-          ctx.strokeStyle = `rgba(0,109,119,${alpha})`;
-          ctx.lineWidth = 0.6;
-          ctx.beginPath();
-          ctx.moveTo(a.sx, a.sy);
-          ctx.lineTo(b.sx, b.sy);
-          ctx.stroke();
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist > 80) continue;
+          const alpha = (1 - dist / 80) * 0.22 * Math.min(a.s, b.s) * 2;
+          if (alpha < 0.01) continue;
+          ctx.strokeStyle = `rgba(0,109,119,${alpha.toFixed(3)})`;
+          ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
         }
       }
 
-      // ── Draw sphere particles (depth sorted) ──────────────────────
+      // Sphere nodes (depth sorted — back to front)
       projected.sort((a, b) => a.z - b.z);
       projected.forEach(p => {
-        const alpha = Math.max(0.08, (p.z / radius + 1) / 2);
-        const pulse = p.size + Math.sin(p.phase) * 0.7;
+        if (p.depth < 0.05) return;
+        const pulse = p.size + Math.sin(p.phase) * 0.9;
+        const alpha = Math.max(0.1, p.depth * 0.95);
 
-        // Outer halo
-        const g = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, pulse * 4);
-        g.addColorStop(0, `rgba(131,197,190,${alpha * 0.8})`);
-        g.addColorStop(0.4, `rgba(0,109,119,${alpha * 0.3})`);
-        g.addColorStop(1, 'transparent');
+        const g = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, pulse * 4.5);
+        g.addColorStop(0,   `rgba(131,197,190,${(alpha * 0.85).toFixed(3)})`);
+        g.addColorStop(0.45,`rgba(0,109,119,${(alpha * 0.35).toFixed(3)})`);
+        g.addColorStop(1,   'transparent');
         ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(p.sx, p.sy, pulse * 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.sx, p.sy, pulse * 4.5, 0, Math.PI * 2); ctx.fill();
 
-        // Solid core
-        ctx.fillStyle = `rgba(0,109,119,${alpha * 0.95})`;
-        ctx.beginPath();
-        ctx.arc(p.sx, p.sy, pulse * 0.9, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = `rgba(0,109,119,${(alpha * 0.92).toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(p.sx, p.sy, pulse, 0, Math.PI * 2); ctx.fill();
       });
 
-      // ══════════════════════════════════════════════════════════════
-      // Draw orbiting data-stream rings
-      // ══════════════════════════════════════════════════════════════
-      RINGS.forEach((ring, ri) => {
-        const axis = norm(ring.axis);
-        const perp1 = norm([-axis[1], axis[0], 0].map(v => v || 0.001));
-        const perp2 = [
-          axis[1] * perp1[2] - axis[2] * perp1[1],
-          axis[2] * perp1[0] - axis[0] * perp1[2],
-          axis[0] * perp1[1] - axis[1] * perp1[0],
-        ];
+      // ── Orbiting rings ──────────────────────────────────────────
+      ringData.forEach(ring => {
+        ring.angles.forEach(rp => { rp.a += ring.spd; rp.phase += 0.03; });
 
-        const rpts = ringPts[ri];
-        rpts.forEach(rp => {
-          rp.angle += ring.speed;
-          rp.phase += 0.03;
+        const RR = SPHERE_R * ring.rFrac;
+        const rProj = ring.angles.map(rp => {
+          // Point on ring in ring-local frame
+          let x = (Math.cos(rp.a) * ring.p1[0] + Math.sin(rp.a) * ring.p2[0]) * RR;
+          let y = (Math.cos(rp.a) * ring.p1[1] + Math.sin(rp.a) * ring.p2[1]) * RR;
+          let z = (Math.cos(rp.a) * ring.p1[2] + Math.sin(rp.a) * ring.p2[2]) * RR;
+          // Apply global rotation
+          const nx2 = x * cosGY - z * sinGY, nz3 = z * cosGY + x * sinGY;
+          const ny2  = y * cosGX - nz3 * sinGX, nz4 = nz3 * cosGX + y * sinGX;
+          const { sx, sy, s } = proj(nx2, ny2, nz4, cx, cy);
+          const depth = Math.max(0, (nz4 / SPHERE_R + 1) / 2);
+          return { sx, sy, s, depth, phase: rp.phase, sz: rp.sz * s };
         });
 
-        const ringRadius = radius * ring.r;
-
-        // Draw ring path as faded line
-        const ringProj = rpts.map(rp => {
-          let px = (Math.cos(rp.angle) * perp1[0] + Math.sin(rp.angle) * perp2[0]) * ringRadius;
-          let py = (Math.cos(rp.angle) * perp1[1] + Math.sin(rp.angle) * perp2[1]) * ringRadius;
-          let pz = (Math.cos(rp.angle) * perp1[2] + Math.sin(rp.angle) * perp2[2]) * ringRadius;
-
-          ;[px, py, pz] = rotateY([px, py, pz], globalAngleY);
-          ;[px, py, pz] = rotateX([px, py, pz], globalAngleX);
-
-          const { sx, sy, scale } = project(px, py, pz, cx, cy);
-          const depthAlpha = Math.max(0.05, (pz / radius + 1) / 2);
-          return { sx, sy, scale, depthAlpha, pz, rp };
-        });
-
-        // Connect ring points as fading arcs
-        for (let i = 0; i < ringProj.length; i++) {
-          const a = ringProj[i];
-          const b = ringProj[(i + 1) % ringProj.length];
-          const alpha = 0.12 * a.depthAlpha;
-          const hex = ring.col;
-          ctx.strokeStyle = alpha > 0.01
-            ? `rgba(${ri === 0 ? '0,109,119' : ri === 1 ? '131,197,190' : '82,183,136'},${alpha})`
-            : 'transparent';
-          ctx.lineWidth = 0.8;
-          ctx.beginPath();
-          ctx.moveTo(a.sx, a.sy);
-          ctx.lineTo(b.sx, b.sy);
-          ctx.stroke();
+        // Ring arcs
+        for (let i = 0; i < rProj.length; i++) {
+          const a2 = rProj[i], b2 = rProj[(i + 1) % rProj.length];
+          const alpha = 0.13 * Math.min(a2.depth, b2.depth);
+          if (alpha < 0.01) continue;
+          ctx.strokeStyle = `rgba(${ring.col.join(',')},${alpha.toFixed(3)})`;
+          ctx.lineWidth = 1.0;
+          ctx.beginPath(); ctx.moveTo(a2.sx, a2.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
         }
 
-        // Ring node glows
-        ringProj.forEach(({ sx, sy, scale, depthAlpha, rp }) => {
-          const pulse = rp.size * scale + Math.sin(rp.phase) * 0.5 * scale;
-          const alpha = depthAlpha * 0.85;
-          const rgb = ri === 0 ? '0,109,119' : ri === 1 ? '131,197,190' : '82,183,136';
-
-          const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, pulse * 3.5);
-          g.addColorStop(0,   `rgba(${rgb},${alpha})`);
-          g.addColorStop(0.5, `rgba(${rgb},${alpha * 0.3})`);
-          g.addColorStop(1, 'transparent');
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(sx, sy, pulse * 3.5, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = `rgba(${rgb},${alpha * 0.9})`;
-          ctx.beginPath();
-          ctx.arc(sx, sy, pulse, 0, Math.PI * 2);
-          ctx.fill();
+        // Ring nodes
+        rProj.forEach(rp => {
+          if (rp.depth < 0.05) return;
+          const pulse = rp.sz + Math.sin(rp.phase) * 0.7;
+          const alpha = rp.depth * 0.9;
+          const g = ctx.createRadialGradient(rp.sx, rp.sy, 0, rp.sx, rp.sy, pulse * 4);
+          g.addColorStop(0,   `rgba(${ring.col.join(',')},${(alpha * 0.9).toFixed(3)})`);
+          g.addColorStop(0.5, `rgba(${ring.col.join(',')},${(alpha * 0.3).toFixed(3)})`);
+          g.addColorStop(1,   'transparent');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(rp.sx, rp.sy, pulse * 4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(${ring.col.join(',')},${(alpha * 0.95).toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(rp.sx, rp.sy, pulse, 0, Math.PI * 2); ctx.fill();
         });
       });
 
-      // ── Vignette to blend into page bg ───────────────────────────
-      const vigGrd = ctx.createRadialGradient(cx, cy, radius * 0.6, cx, cy, radius * 1.6);
-      vigGrd.addColorStop(0, 'transparent');
-      vigGrd.addColorStop(1, 'rgba(237,246,249,0.55)');
-      ctx.fillStyle = vigGrd;
-      ctx.fillRect(0, 0, w, h);
+      // Edge vignette — blends canvas into page
+      const vg = ctx.createRadialGradient(cx, cy, SPHERE_R * 0.55, cx, cy, SPHERE_R * 1.7);
+      vg.addColorStop(0, 'transparent');
+      vg.addColorStop(1, 'rgba(237,246,249,0.55)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
       raf = requestAnimationFrame(render);
     };
@@ -332,7 +284,7 @@ export default function Hero3DCanvas() {
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
+      ro.disconnect();
       window.removeEventListener('mousemove', onMove);
     };
   }, []);
@@ -340,8 +292,15 @@ export default function Hero3DCanvas() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-auto"
-      style={{ zIndex: 0 }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        zIndex: 0,
+        pointerEvents: 'auto',
+      }}
     />
   );
 }

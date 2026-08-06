@@ -141,7 +141,7 @@ const LandingPage = () => {
           HERO — full-viewport 3D interactive section
       ═══════════════════════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center text-center
-                          min-h-[92vh] px-4 sm:px-6 lg:px-8 overflow-hidden">
+                          min-h-[92vh] h-[92vh] px-4 sm:px-6 lg:px-8 overflow-hidden">
 
         {/* ── 3D Canvas ── */}
         <Hero3DCanvas />
