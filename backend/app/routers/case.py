@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File
 from fastapi.responses import FileResponse
 
-from app.schemas.case import CaseCreateRequest, CaseClarifyingAnswerRequest, CaseUpdateTitleRequest
+from app.schemas.case import CaseCreateRequest, CaseClarifyingAnswerRequest, CaseUpdateTitleRequest, CaseMarkCategoryRequest
 from app.models.case import CaseInDB, EvidenceItem
 from app.dependencies.auth import get_current_user
 from app.models.user import UserInDB
@@ -474,4 +474,45 @@ async def save_case_chat_history(
     if not updated_doc:
         raise HTTPException(status_code=404, detail="Case not found")
     return CaseInDB(**updated_doc)
+
+
+@router.patch(
+    "/{case_id}/category",
+    response_model=CaseInDB,
+    summary="Mark/update case status and severity category",
+)
+async def update_case_category(
+    request: Request,
+    case_id: str,
+    body: CaseMarkCategoryRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection unavailable")
+
+    case_doc = await db.cases.find_one({"_id": case_id, "user_id": current_user.id})
+    if not case_doc:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    now = datetime.now(timezone.utc)
+    set_fields = {"updated_at": now}
+
+    if body.status is not None:
+        set_fields["status"] = body.status
+
+    if body.severity is not None:
+        findings = case_doc.get("findings") or {}
+        findings["severity"] = body.severity
+        findings["escalation_flag"] = body.severity
+        set_fields["findings"] = findings
+
+    await db.cases.update_one(
+        {"_id": case_id, "user_id": current_user.id},
+        {"$set": set_fields}
+    )
+
+    updated_doc = await db.cases.find_one({"_id": case_id, "user_id": current_user.id})
+    return CaseInDB(**updated_doc)
+
 

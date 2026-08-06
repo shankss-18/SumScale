@@ -34,3 +34,9 @@ class CaseUpdateTitleRequest(BaseModel):
         description="Custom title for case/chat session. Maximum 200 characters.",
     )
 
+
+class CaseMarkCategoryRequest(BaseModel):
+    status: Optional[str] = Field(default=None, description="Status category e.g. 'completed', 'clarifying', 'draft'")
+    severity: Optional[str] = Field(default=None, description="Severity category e.g. 'high', 'medium', 'low'")
+
+

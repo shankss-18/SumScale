@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
 import CaseReminderCard from '../components/CaseReminderCard';
 import FormattedChatMessage from '../components/FormattedChatMessage';
-import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory, apiSendEmailAlert } from '../api/client';
+import { apiGetCase, apiDeleteCase, apiChat, apiUploadCaseFile, apiAnalyzeCase, getFileDownloadUrl, apiUpdateCaseTitle, apiSaveCaseChatHistory, apiSendEmailAlert, apiUpdateCaseCategory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const CaseReport = () => {
@@ -18,6 +18,28 @@ const CaseReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  const handleMarkCategoryInReport = async (newStatus, newSeverity) => {
+    setCaseData((prev) => {
+      if (!prev) return prev;
+      const updatedFindings = { ...(prev.findings || {}) };
+      if (newSeverity !== undefined) {
+        updatedFindings.severity = newSeverity;
+        updatedFindings.escalation_flag = newSeverity;
+      }
+      return {
+        ...prev,
+        status: newStatus !== undefined ? newStatus : prev.status,
+        findings: updatedFindings,
+      };
+    });
+
+    try {
+      await apiUpdateCaseCategory(caseId, { status: newStatus, severity: newSeverity });
+    } catch (err) {
+      console.error('Failed to update case category:', err);
+    }
+  };
 
   // Chat & Attachments State
   const [messages, setMessages] = useState([]);
@@ -739,19 +761,28 @@ const CaseReport = () => {
                   </div>
                 )}
 
-                {flag === 'high' ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] font-extrabold uppercase shrink-0">
-                    HIGH ALERT
-                  </span>
-                ) : flag === 'medium' ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-extrabold uppercase shrink-0">
-                    MEDIUM RISK
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#EDF6F9] border border-[#83C5BE]/50 text-[#006D77] text-[9px] font-extrabold uppercase shrink-0">
-                    LOW RISK
-                  </span>
-                )}
+                {/* Interactive Mark Category & Risk Severity Selectors */}
+                <select
+                  value={flag || 'low'}
+                  onChange={(e) => handleMarkCategoryInReport(undefined, e.target.value)}
+                  title="Click to mark Risk Severity"
+                  className="cursor-pointer appearance-none outline-none font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-0.5 rounded-full border transition-all hover:scale-105 shadow-2xs bg-white text-slate-800 border-[#83C5BE]/60"
+                >
+                  <option value="high" className="text-slate-900 bg-white font-bold">🚨 HIGH ALERT</option>
+                  <option value="medium" className="text-slate-900 bg-white font-bold">⚠️ MEDIUM RISK</option>
+                  <option value="low" className="text-slate-900 bg-white font-bold">✅ LOW RISK</option>
+                </select>
+
+                <select
+                  value={caseData.status === 'completed' ? 'completed' : caseData.status === 'clarifying' ? 'clarifying' : 'draft'}
+                  onChange={(e) => handleMarkCategoryInReport(e.target.value, undefined)}
+                  title="Click to mark Document Status"
+                  className="cursor-pointer appearance-none outline-none font-bold text-[9px] tracking-wide px-2.5 py-0.5 rounded-full border transition-all hover:scale-105 shadow-2xs bg-[#EDF6F9] text-[#006D77] border-[#83C5BE]/60"
+                >
+                  <option value="completed" className="text-slate-900 bg-white font-bold">✅ Fully Analyzed</option>
+                  <option value="clarifying" className="text-slate-900 bg-white font-bold">💬 Needs Clarification</option>
+                  <option value="draft" className="text-slate-900 bg-white font-bold">📝 Draft / Collecting</option>
+                </select>
               </div>
               <p className="text-[10px] text-slate-400 mt-0.5">
                 Analyzed on {new Date(caseData.created_at || Date.now()).toLocaleDateString()} · Active Chat Session

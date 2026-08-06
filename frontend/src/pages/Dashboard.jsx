@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
 import FloatingChatbot from '../components/FloatingChatbot';
-import { apiListCases } from '../api/client';
+import { apiListCases, apiUpdateCaseCategory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 /* ─── Radial Ring Chart — concentric animated arcs per severity ─── */
@@ -196,6 +196,37 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [savedChats, setSavedChats] = useState([]);
+
+  const handleMarkCategory = async (e, caseId, newStatus, newSeverity) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Optimistically update state
+    setCases((prevCases) =>
+      prevCases.map((c) => {
+        const id = c._id || c.id;
+        if (id === caseId) {
+          const updatedFindings = { ...(c.findings || {}) };
+          if (newSeverity !== undefined) {
+            updatedFindings.severity = newSeverity;
+            updatedFindings.escalation_flag = newSeverity;
+          }
+          return {
+            ...c,
+            status: newStatus !== undefined ? newStatus : c.status,
+            findings: updatedFindings,
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await apiUpdateCaseCategory(caseId, { status: newStatus, severity: newSeverity });
+    } catch (err) {
+      console.error('Failed to update category:', err);
+    }
+  };
 
   const fetchCases = async () => {
     setLoading(true);
@@ -498,24 +529,41 @@ const Dashboard = () => {
                         pointerEvents: 'none',
                       }} />
 
-                    {/* Tags row */}
-                    <div className="flex flex-wrap gap-1.5 mb-3 relative z-10">
-                      {flag && (
-                        <span style={{
-                          padding: '2px 10px', borderRadius: '999px',
-                          fontSize: '9px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
-                          background: config.tagBg, color: config.tagText, border: `1px solid ${config.tagBorder}`,
-                        }}>
-                          {flag === 'high' ? t('severity.high') : flag === 'medium' ? t('severity.medium') : t('severity.low')}
-                        </span>
-                      )}
-                      <span style={{
-                        padding: '2px 10px', borderRadius: '999px',
-                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.05em',
-                        background: config.tagBg, color: config.tagText, border: `1px solid ${config.tagBorder}`,
-                      }}>
-                        {c.status === 'completed' ? t('dashboard.fullyAnalyzed') : c.status === 'clarifying' ? t('dashboard.needsClarification') : t('dashboard.draftCollecting')}
-                      </span>
+                    {/* Interactive Mark Category & Status Controls */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3 relative z-30" onClick={(e) => e.stopPropagation()}>
+                      {/* Risk Severity Dropdown */}
+                      <select
+                        value={flag || 'low'}
+                        onChange={(e) => handleMarkCategory(e, caseId, undefined, e.target.value)}
+                        title="Click to mark Risk Severity"
+                        className="cursor-pointer appearance-none outline-none font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
+                        style={{
+                          background: config.tagBg,
+                          color: config.tagText,
+                          border: `1px solid ${config.tagBorder}`,
+                        }}
+                      >
+                        <option value="high" className="text-slate-900 bg-white font-bold">🚨 {t('severity.high')}</option>
+                        <option value="medium" className="text-slate-900 bg-white font-bold">⚠️ {t('severity.medium')}</option>
+                        <option value="low" className="text-slate-900 bg-white font-bold">✅ {t('severity.low')}</option>
+                      </select>
+
+                      {/* Status Progress Dropdown */}
+                      <select
+                        value={c.status === 'completed' ? 'completed' : c.status === 'clarifying' ? 'clarifying' : 'draft'}
+                        onChange={(e) => handleMarkCategory(e, caseId, e.target.value, undefined)}
+                        title="Click to mark Document Status"
+                        className="cursor-pointer appearance-none outline-none font-bold text-[9px] tracking-wide px-2.5 py-1 rounded-full transition-all hover:scale-105 shadow-2xs"
+                        style={{
+                          background: config.tagBg,
+                          color: config.tagText,
+                          border: `1px solid ${config.tagBorder}`,
+                        }}
+                      >
+                        <option value="completed" className="text-slate-900 bg-white font-bold">✅ {t('dashboard.fullyAnalyzed')}</option>
+                        <option value="clarifying" className="text-slate-900 bg-white font-bold">💬 {t('dashboard.needsClarification')}</option>
+                        <option value="draft" className="text-slate-900 bg-white font-bold">📝 {t('dashboard.draftCollecting')}</option>
+                      </select>
                     </div>
 
                     {/* Growable content area */}
