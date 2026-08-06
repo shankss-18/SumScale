@@ -197,11 +197,20 @@ const Dashboard = () => {
   const fetchCases = async () => {
     setLoading(true);
     setError(null);
+    const local = JSON.parse(localStorage.getItem('sumscale_local_cases') || '[]');
     try {
       const res = await apiListCases();
-      setCases(res.data || []);
+      const remote = res.data || [];
+      // Combine remote and local cases, avoiding duplicates
+      const remoteIds = new Set(remote.map(c => c._id || c.id));
+      const combined = [...remote, ...local.filter(l => !remoteIds.has(l._id || l.id))];
+      setCases(combined);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load documents.');
+      if (local.length > 0) {
+        setCases(local);
+      } else {
+        setError(err.response?.data?.detail || 'Failed to load documents.');
+      }
     } finally {
       setLoading(false);
     }

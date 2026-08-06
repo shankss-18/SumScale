@@ -151,56 +151,79 @@ const CaseReport = () => {
   const fetchCase = async () => {
     setLoading(true);
     setError(null);
+    let data = null;
     try {
       const res = await apiGetCase(caseId);
-      const data = res.data;
-      setCaseData(data);
-
-      // Load persistent chat history from localStorage or initialize with AI Analysis Summary
-      const storageKey = `sumscale_case_chat_${caseId}`;
-      const savedChat = localStorage.getItem(storageKey);
-
-      if (savedChat) {
-        try {
-          const parsed = JSON.parse(savedChat);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // fallback to initial message
-        }
-      }
-
-      // Initial AI Welcome & Analysis Summary message (Warm & Human)
-      const findings = data.findings || {};
-      const initialSummary = findings.summary || findings.pattern_classification || 'Your uploaded records have been processed.';
-      const remediation = findings.remediation_checklist || [];
-      const escalationFlag = findings.escalation_flag || findings.severity;
-
-      let welcomeText = `Hi there! I've carefully reviewed your uploaded records for Case **#${caseId.slice(-6)}**.\n\n` +
-        `**Overview:**\n${initialSummary}\n\n`;
-
-      if (remediation.length > 0) {
-        welcomeText += `**Recommended Next Steps:**\n` + remediation.map((item, i) => `• ${item}`).join('\n') + `\n\n`;
-      }
-
-      if (escalationFlag === 'high') {
-        welcomeText += `🚨 **Important Notice:** Because high-risk or fever findings were noted, I recommend reaching out to a doctor or specialist for a personal check-up.\n\n`;
-      }
-
-      welcomeText += `What questions or concerns can I help you explore next?`;
-
-      const initialMsgs = [{ sender: 'ai', text: welcomeText, timestamp: new Date().toISOString() }];
-      setMessages(initialMsgs);
-      localStorage.setItem(storageKey, JSON.stringify(initialMsgs));
-
+      data = res.data;
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load document analysis chat.');
-    } finally {
-      setLoading(false);
+      const local = JSON.parse(localStorage.getItem('sumscale_local_cases') || '[]');
+      data = local.find(l => (l._id || l.id) === caseId);
+      if (!data && caseId.startsWith('demo_case_')) {
+        data = {
+          _id: caseId,
+          id: caseId,
+          department: 'health',
+          description: 'Document analysis case.',
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          evidence: [{ file_id: 'f_1', original_name: 'document.pdf', file_type: 'pdf', extracted_text: 'Sample document text' }],
+          findings: {
+            summary: 'Document analysis completed. Model ready for questions.',
+            severity: 'low',
+            escalation_flag: 'low',
+            remediation_checklist: ['Review key findings', 'Ask questions to copilot'],
+          },
+        };
+      }
     }
+
+    if (!data) {
+      setError('Document case not found.');
+      setLoading(false);
+      return;
+    }
+
+    setCaseData(data);
+
+    // Load persistent chat history from localStorage or initialize with AI Analysis Summary
+    const storageKey = `sumscale_case_chat_${caseId}`;
+    const savedChat = localStorage.getItem(storageKey);
+
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // fallback to initial message
+      }
+    }
+
+    const findings = data.findings || {};
+    const initialSummary = findings.summary || findings.pattern_classification || 'Your uploaded records have been processed.';
+    const remediation = findings.remediation_checklist || [];
+    const escalationFlag = findings.escalation_flag || findings.severity;
+
+    let welcomeText = `Hi there! I've carefully reviewed your uploaded records for Case **#${caseId.slice(-6)}**.\n\n` +
+      `**Overview:**\n${initialSummary}\n\n`;
+
+    if (remediation.length > 0) {
+      welcomeText += `**Recommended Next Steps:**\n` + remediation.map((item, i) => `• ${item}`).join('\n') + `\n\n`;
+    }
+
+    if (escalationFlag === 'high') {
+      welcomeText += `🚨 **Important Notice:** Because high-risk or fever findings were noted, I recommend reaching out to a doctor or specialist for a personal check-up.\n\n`;
+    }
+
+    welcomeText += `What questions or concerns can I help you explore next?`;
+
+    const initialMsgs = [{ sender: 'ai', text: welcomeText, timestamp: new Date().toISOString() }];
+    setMessages(initialMsgs);
+    localStorage.setItem(storageKey, JSON.stringify(initialMsgs));
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -407,7 +430,8 @@ const CaseReport = () => {
     // Helper: Play Backend TTS MP3 stream (works 100% reliably for all Indian languages & browsers)
     const playBackendTTS = (phrase) => {
       const shortPhrase = phrase.slice(0, 300);
-      const url = `http://localhost:8000/chat/tts?text=${encodeURIComponent(shortPhrase)}&lang=${currentLang}`;
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+      const url = `${apiBase}/chat/tts?text=${encodeURIComponent(shortPhrase)}&lang=${currentLang}`;
       const audio = new Audio(url);
       currentAudioRef.current = audio;
       audio.onended = () => {

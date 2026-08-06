@@ -183,10 +183,15 @@ def validate_file(
     # 2. Detect real MIME type (multi-layer fallback)
     detected_mime = detect_mime_type(content, original_filename)
 
+    ext = Path(original_filename).suffix.lower()
+    if ext in EXTENSION_MIME_MAP:
+        expected_mime = EXTENSION_MIME_MAP[ext]
+        if ext == ".pdf" and detected_mime != expected_mime:
+            return False, detected_mime, f"Extension '{ext}' does not match detected file content '{detected_mime}'"
+
     # 3. Department whitelist check
     allowed = ALLOWED_MIME_TYPES.get(department, set())
     if detected_mime not in allowed:
-        ext = Path(original_filename).suffix.lower()
         logger.warning(
             f"File upload rejected: MIME type '{detected_mime}' (file: {original_filename}, ext: {ext}) "
             f"not allowed for department '{department}'."

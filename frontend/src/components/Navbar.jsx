@@ -6,12 +6,21 @@ import { useTranslation } from 'react-i18next';
 import BrandIcon from './BrandIcon';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { i18n, t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleDemoLogin = async () => {
+    try {
+      await login('demo@omniaid.ai', 'DemoUserPass123!');
+      navigate('/dashboard');
+    } catch {
+      navigate('/dashboard');
+    }
+  };
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -154,12 +163,13 @@ const Navbar = () => {
               >
                 Sign In
               </Link>
-              <Link
-                to="/login"
-                className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full px-4 py-2 text-xs font-bold transition-all hidden sm:inline-block"
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                className="bg-white border border-slate-200 text-[#006D77] hover:bg-[#EDF6F9] rounded-full px-4 py-2 text-xs font-bold transition-all hidden sm:inline-block cursor-pointer"
               >
-                Demo Account
-              </Link>
+                ⚡ Demo Account
+              </button>
             </div>
           )}
         </div>

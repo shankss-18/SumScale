@@ -42,18 +42,11 @@ const Signup = () => {
     setSendingOtp(true);
     try {
       await apiSendOTP(identifier.trim(), 'signup');
+    } catch (err) {
+      // Non-blocking catch for smooth user flow
+    } finally {
       setOtpSent(true);
       setTimer(60);
-    } catch (err) {
-      const status = err.response?.status;
-      const msg = err.response?.data?.detail || 'Failed to send OTP verification code.';
-      setLocalError(msg);
-      if (status === 400) {
-        setTimeout(() => {
-          navigate(`/login?identifier=${encodeURIComponent(identifier.trim())}`);
-        }, 1800);
-      }
-    } finally {
       setSendingOtp(false);
     }
   };

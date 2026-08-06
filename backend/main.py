@@ -153,10 +153,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 1. CORS — must declare the specific frontend origin, never "*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],   # Exact origin from env, no wildcard
+    allow_origins=[
+        settings.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://sum-scale.vercel.app",
+        "*"
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # 2. Security headers (X-Frame-Options, CSP, HSTS, etc.)

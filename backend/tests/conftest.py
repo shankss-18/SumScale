@@ -46,7 +46,10 @@ class MockCollection:
 
     def _matches(self, doc, query):
         for k, v in query.items():
-            if k == "_id" and isinstance(v, ObjectId):
+            if k == "$or":
+                if not any(self._matches(doc, cond) for cond in v):
+                    return False
+            elif k == "_id" and isinstance(v, ObjectId):
                 if str(doc.get("_id")) != str(v):
                     return False
             elif isinstance(v, dict):
