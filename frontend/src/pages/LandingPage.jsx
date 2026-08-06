@@ -90,14 +90,17 @@ const LandingPage = () => {
           transform: translateY(0);
         }
 
-        /* ── Capability card pop (layered over base reveal) ── */
+        /* ── Capability card pop & shining light sweep ── */
         .cap-card {
           opacity: 0;
           transform: translateY(40px) scale(0.97);
           transition:
             opacity   0.4s ease-out,
             transform 0.15s ease-out,
-            box-shadow 0.15s ease-out;
+            box-shadow 0.15s ease-out,
+            border-color 0.15s ease-out;
+          position: relative;
+          overflow: hidden;
         }
         .cap-card.revealed {
           opacity: 1;
@@ -106,8 +109,41 @@ const LandingPage = () => {
         }
         .cap-card:hover {
           transform: translateY(-8px) scale(1.015) !important;
-          box-shadow: 0 20px 48px -8px rgba(0,109,119,0.22);
+          box-shadow: 0 22px 50px -6px rgba(0,109,119,0.26);
+          border-color: rgba(131,197,190,0.8);
           transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+        }
+
+        /* ── Card Shining Reflection Sweep Effect ── */
+        .cap-card::after {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -70%;
+          width: 50%;
+          height: 200%;
+          background: linear-gradient(
+            115deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.08) 25%,
+            rgba(255, 255, 255, 0.55) 50%,
+            rgba(255, 255, 255, 0.08) 75%,
+            transparent 100%
+          );
+          transform: rotate(22deg);
+          pointer-events: none;
+          opacity: 0;
+          z-index: 20;
+        }
+
+        .cap-card:hover::after {
+          opacity: 1;
+          animation: card-shine-sweep 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes card-shine-sweep {
+          0% { left: -70%; }
+          100% { left: 150%; }
         }
 
         /* ── Capability cards hover lift ── */
