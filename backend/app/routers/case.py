@@ -202,12 +202,16 @@ async def analyze_case(
 
     dept = case_doc.get("department")
 
-    # Auto-detect if evidence contains fraud indicators
+    # Comprehensive auto-detection for fraud, phishing, scam, fake invoice, security threats
     combined_evidence = " ".join(evidence_texts).lower()
     fraud_keywords = [
         "fraud", "scam", "bank", "otp", "phishing", "sms", "link",
         "whatsapp", "transaction", "money", "account", "police", "card",
-        "cyber", "verify", "paytm", "upi", "lottery", "prize", "urgent"
+        "cyber", "verify", "paytm", "upi", "lottery", "prize", "urgent",
+        "invoice", "payment", "due date", "transfer", "shipment", "suspension",
+        "login", "claim", "winner", "security", "unusual activity", "wire",
+        "credit card", "debit card", "pin", "password", "tax", "customs",
+        "fee", "forfeited", "logistics", "accounts department", "warehouse"
     ]
     if any(k in combined_evidence for k in fraud_keywords):
         dept = "fraud"
@@ -242,6 +246,7 @@ async def analyze_case(
 
     now = datetime.now(timezone.utc)
     update_data = {
+        "department": dept,  # Persist auto-detected department back to DB!
         "status": new_status,
         "merged_facts": merged_facts,
         "findings": findings,

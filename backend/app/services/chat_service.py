@@ -43,6 +43,35 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
     merged_facts = latest_case.get("merged_facts", {})
     dept = (latest_case.get("department") or "document").lower()
 
+    msg_lower = user_message.lower()
+
+    # --- FRAUD / SECURITY DEPARTMENT FALLBACK ---
+    fraud_kws = ["fraud", "scam", "bank", "otp", "phishing", "sms", "link", "invoice", "payment", "lotto", "upi", "paytm", "suspension"]
+    if dept == "fraud" or any(k in msg_lower for k in fraud_kws):
+        pattern = findings.get("pattern_classification") or "Suspicious Communication / Fraud Risk"
+        score = findings.get("risk_score") or 75
+        citations = findings.get("evidence_citations") or []
+        remediation = findings.get("remediation_checklist") or [
+            "Do not click any links or download attachments.",
+            "Verify the sender's identity through official channels directly.",
+            "Report the suspicious message to the CyberCrime Helpline (1930) or cybercrime.gov.in."
+        ]
+        severity = (findings.get("severity") or "high").lower()
+
+        if any(k in msg_lower for k in ["invoice", "real", "fake", "bank", "email", "sms", "wrong", "mean", "explain", "tell me", "what is"]):
+            ans_parts = [f"Looking at your uploaded security documents, this case is flagged under **{pattern}** with a risk rating of **{severity.upper()}** (Score: {score}/100)."]
+            if citations:
+                ans_parts.append(f"Key red flags: {citations[0]}.")
+            ans_parts.append("To tell a real invoice or email from a fake: check the exact sender email domain (e.g., @sbi-verify-online.com vs official sbi.co.in), watch for fake urgency demands ('pay within 24 hours'), and verify bank/UPI payment details directly via the company's verified website.")
+            return " ".join(ans_parts)
+
+        if any(k in msg_lower for k in ["do", "step", "action", "precaution", "now", "next", "how", "should i"]):
+            steps_str = "\n".join([f"- {s}" for s in remediation[:4]])
+            return f"Here are the recommended security actions for this **{pattern}** case:\n\n{steps_str}\n\nNever share OTPs, passwords, or netbanking credentials with unverified contacts."
+
+        return f"Your case is classified as **{pattern}** with a **{severity}** risk level. Key recommendation: verify all sender domains and payment requests through official verified channels before taking any action or transferring money."
+
+    # --- HEALTH DEPARTMENT FALLBACK ---
     # Pull real extracted data first — fall back to findings fields only if missing
     symptoms = merged_facts.get("symptoms") or []
     medications = merged_facts.get("medications_mentioned") or []
@@ -351,6 +380,44 @@ async def generate_grounded_chat_response(
     import time
     _seed = int(time.time()) % 10000
 
+    # Determine primary department & adapt Copilot persona
+    all_depts = [c.get("department") for c in user_cases if c.get("department")]
+    is_fraud_case = "fraud" in all_depts or any(
+        k in (user_message + " " + cases_context_json).lower()
+        for k in ["fraud", "scam", "bank", "otp", "phishing", "sms", "link", "invoice", "payment", "lotto", "upi", "paytm", "suspension"]
+    )
+
+    if is_fraud_case:
+        system_persona = (
+            "You are SumScale Copilot — a sharp, expert Cybersecurity, Phishing & Fraud Intelligence Specialist. "
+            "You speak like a protective security analyst who helps users identify scam emails, fake invoices, "
+            "phishing links, SMS fraud, and suspicious payment requests."
+        )
+        domain_mandate = (
+            "7. THIS CASE IS A FRAUD / SECURITY AUDIT. DO NOT USE MEDICAL OR HEALTH LANGUAGE. "
+            "DO NOT MENTION DOCTORS, SYMPTOMS, LAB RESULTS, OR CLINIC APPOINTMENTS. "
+            "Analyze the document strictly for scam indicators, fake invoice signs, phishing domain red flags, "
+            "unverified UPI IDs, urgency phrasing, and security precautions."
+        )
+        domain_reasoning = "Step 4: Add one sentence of security context if helpful ('Official banks will never ask for PINs or credentials via email...')."
+        default_next_questions = [
+            "How can I tell if this sender address is legitimate?",
+            "What step-by-step precautions should I take against this scam?",
+            "Where can I report this suspicious communication?"
+        ]
+    else:
+        system_persona = (
+            "You are SumScale Copilot — a sharp, empathetic AI Health & Medical Assistant. "
+            "You speak like a brilliant, caring friend who happens to have medical and analytical expertise."
+        )
+        domain_mandate = "7. If the user asks about cholesterol → quote their actual cholesterol value. If they ask about their prescription → name the actual medication. If they ask about an appointment → give the actual date/doctor name."
+        domain_reasoning = "Step 4: Add one sentence of medical context if helpful ('High LDL is linked to...')."
+        default_next_questions = [
+            "What are the main risk factors in my document?",
+            "Explain key medical terms simply",
+            "What step-by-step precautions should I take?"
+        ]
+
     # Build a compact document inventory summary for the prompt header
     doc_inventory_lines = []
     for fc in formatted_cases:
@@ -360,7 +427,7 @@ async def generate_grounded_chat_response(
 
     prompt = f"""{PROMPT_INJECTION_PROTECTION}
 
-You are SumScale Copilot — a sharp, empathetic AI health and document assistant. You speak like a brilliant, caring friend who happens to have medical and analytical expertise. Your job is to answer the user's EXACT question using the real content from their uploaded documents.
+{system_persona} Your job is to answer the user's EXACT question using the real content from their uploaded documents.
 
 ================================================================================
 LANGUAGE: Write ALL output exclusively in **{lang_name}** ({language}). No English unless language is 'en'.
@@ -371,18 +438,18 @@ LANGUAGE: Write ALL output exclusively in **{lang_name}** ({language}). No Engli
 
 🚨 SPECIFICITY MANDATE (CRITICAL — VIOLATION = FAILURE):
 This is turn #{_seed}. You MUST:
-1. READ the `raw_documents` section in the case data — it contains the ACTUAL text from the user's uploaded files (blood test results, prescription notes, appointment cards, etc.).
-2. ANSWER DIRECTLY using specific values, numbers, medication names, dates, and details from those documents.
-3. NEVER give generic health advice ("stay hydrated", "rest") unless you can tie it to a specific finding in their actual document.
+1. READ the `raw_documents` section in the case data — it contains the ACTUAL text from the user's uploaded files.
+2. ANSWER DIRECTLY using specific values, names, dates, amounts, links, or addresses from those documents.
+3. NEVER give generic advice unless tied to a specific finding in their document.
 4. NEVER start with a section header like "Case Overview" or "Assessment".
 5. NEVER produce the same answer structure twice in a conversation — check <conversation_history> and vary your response.
-6. If the user asks about cholesterol → quote their actual cholesterol value. If they ask about their prescription → name the actual medication. If they ask about an appointment → give the actual date/doctor name.
+6. {domain_mandate}
 
 🧠 REASONING PROCESS (follow this before writing your answer):
 Step 1: Identify the exact question the user is asking.
 Step 2: Find the relevant data in `raw_documents` and `merged_facts`.
 Step 3: Answer THAT question using THOSE specifics.
-Step 4: Add one sentence of medical context if helpful ("High LDL is linked to...").
+{domain_reasoning}
 Step 5: Offer ONE natural follow-up, not a menu of options.{threat_prompt_section}
 
 TONE:
@@ -408,7 +475,7 @@ USER'S CURRENT MESSAGE — answer THIS and ONLY THIS:
 
 Return ONLY valid JSON:
 {{
-    "answer": "Specific, warm, document-grounded answer that directly addresses what the user asked. Cites actual values/names/dates from their documents. In {lang_name}.",
+    "answer": "Specific, warm, document-grounded answer that directly addresses what the user asked. Cites actual values/names/dates/amounts from their documents. In {lang_name}.",
     "cited_cases": [
         {{
             "case_id": "case_id_here",

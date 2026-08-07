@@ -124,6 +124,37 @@ const CaseReport = () => {
       ]
     };
 
+    if (caseData?.department === 'fraud') {
+      const FRAUD_PROMPT_DICTS = {
+        en: [
+          "How can I tell if this document or invoice is authentic?",
+          "What specific red flags make this suspicious?",
+          "What step-by-step security precautions should I take?"
+        ],
+        hi: [
+          "मैं कैसे बता सकता हूं कि यह दस्तावेज असली है या फर्जी?",
+          "इस संदेश में क्या संदिग्ध लाल झंडे हैं?",
+          "मुझे क्या सुरक्षा सावधानियां बरतनी चाहिए?"
+        ],
+        te: [
+          "ఈ డాక్యుమెంట్ అసలైనదో కాదో నేను ఎలా తెలుసుకోవచ్చు?",
+          "ఇందులో అనుమానాస్పదమైన అంశాలు ఏమిటి?",
+          "నేను ఏ భద్రతా జాగ్రత్తలు తీసుకోవాలి?"
+        ],
+        ta: [
+          "இந்த ஆவணம் உண்மையானதா என்பதை நான் எவ்வாறு கண்டறிவது?",
+          "இதில் உள்ள சந்தேகத்திற்குரிய விவரங்கள் யாவை?",
+          "நான் என்ன பாதுகாப்பு முன்னெச்சரிக்கை நடவடிக்கைகளை எடுக்க வேண்டும்?"
+        ],
+        kn: [
+          "ಈ ದಾಖಲೆ ನಿಜವಾದದ್ದೇ ಎಂದು ನಾನು ಹೇಗೆ ತಿಳಿಯುವುದು?",
+          "ಇದರಲ್ಲಿ ಸಂಶಯಾಸ್ಪದ ಅಂಶಗಳು ಯಾವುವು?",
+          "ನಾನು ಯಾವ ಭದ್ರತಾ ಮುನ್ನೆಚ್ಚರಿಕೆಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಬೇಕು?"
+        ]
+      };
+      return FRAUD_PROMPT_DICTS[currentLang] || FRAUD_PROMPT_DICTS.en;
+    }
+
     const DEFAULT_PROMPTS = PROMPT_DICTS[currentLang] || PROMPT_DICTS.en;
 
     const lastMsg = [...messages].reverse().find((m) => m.sender === 'ai' || m.sender === 'user');
@@ -436,15 +467,20 @@ const CaseReport = () => {
       // Only override if answer is genuinely empty or is the old voice-note placeholder
       if (!aiResponseText || aiResponseText.includes('cannot analyze your voice query directly')) {
         const findings = caseData?.findings || {};
-        const summary = findings.summary || findings.pattern_classification || 'your recent health notes';
+        const isFraud = caseData?.department === 'fraud';
+        const summary = findings.summary || findings.pattern_classification || (isFraud ? 'your uploaded security documents' : 'your uploaded records');
         const remediation = findings.remediation_checklist || [];
+
+        const closingLine = isFraud
+          ? `Please let me know if you have any questions about verifying this communication or staying safe online!`
+          : `Please let me know if there's anything specific you'd like me to explain further!`;
 
         aiResponseText =
           `I took a close look at your records. ${summary}\n\n` +
           (remediation.length > 0
             ? `Here is what I recommend keeping in mind:\n` + remediation.map((r) => `• ${r}`).join('\n') + `\n\n`
             : '') +
-          `Please let me know if you're experiencing any new symptoms, or if there's anything specific you'd like me to explain further!`;
+          closingLine;
       }
 
       const citedCases = res.data?.cited_cases || [];

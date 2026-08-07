@@ -131,7 +131,14 @@ const NewCase = () => {
     }
     setSubmitting(true);
     try {
-      const createRes = await apiCreateCase('health', description);
+      let initialDept = 'health';
+      const fileNamesAndText = (description + ' ' + selectedFiles.map((f) => f.name).join(' ')).toLowerCase();
+      const fraudKws = ['fraud', 'scam', 'bank', 'otp', 'phishing', 'sms', 'link', 'invoice', 'payment', 'due', 'lotto', 'upi', 'paytm', 'suspension', 'logistics', 'customs'];
+      if (fraudKws.some((k) => fileNamesAndText.includes(k))) {
+        initialDept = 'fraud';
+      }
+
+      const createRes = await apiCreateCase(initialDept, description);
       const caseData = createRes.data;
       const caseId = caseData._id || caseData.id;
       for (const file of selectedFiles) {

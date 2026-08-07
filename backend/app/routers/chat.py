@@ -46,10 +46,24 @@ async def chat_with_assistant(
     cursor = db.cases.find(query).sort("created_at", -1)
     user_cases = await cursor.to_list(length=50)
 
-    # Fallback to user's general cases if specific case_id lookup returned no records
-    if not user_cases:
-        cursor = db.cases.find({"user_id": current_user.id}).sort("created_at", -1)
-        user_cases = await cursor.to_list(length=50)
+    # Auto-correct case department if evidence or query contains fraud/scam/invoice indicators
+    fraud_keywords = [
+        "fraud", "scam", "bank", "otp", "phishing", "sms", "link",
+        "whatsapp", "transaction", "money", "account", "police", "card",
+        "cyber", "verify", "paytm", "upi", "lottery", "prize", "urgent",
+        "invoice", "payment", "due date", "transfer", "shipment", "suspension",
+        "login", "claim", "winner", "security", "unusual activity", "wire",
+        "credit card", "debit card", "pin", "password", "tax", "customs",
+        "fee", "forfeited", "logistics", "accounts department", "warehouse"
+    ]
+    for c in user_cases:
+        ev_text = " ".join([e.get("extracted_text", "") for e in c.get("evidence", [])]).lower()
+        if c.get("department") != "fraud" and any(k in ev_text for k in fraud_keywords):
+            c["department"] = "fraud"
+            try:
+                await db.cases.update_one({"_id": c["_id"]}, {"$set": {"department": "fraud"}})
+            except Exception as e:
+                pass
 
     result = await generate_grounded_chat_response(
         user_message=body.message.strip(),
