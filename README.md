@@ -15,7 +15,7 @@
 Every day, individuals and businesses struggle with unorganized, multi-format data:
 1. **Medical & Technical Reports**: Complex lab tests and PDFs filled with jargon that non-experts cannot interpret quickly.
 2. **Vernacular & Audio Barriers**: Millions of users communicate via regional spoken dialects or voice notes rather than typed text.
-3. **Cyber Fraud & Scams**: Increasing prevalence of fake invoices, phishing SMS, and impersonation attempts targeting non-technical users.
+3. **Cyber Fraud & Scams**: Increasing prevalence of fake invoices, phishing messages, and impersonation attempts targeting non-technical users.
 
 ### The Solution: SumScale AI
 **SumScale** unifies **Document Digitisation**, **Speech & Voice Intelligence**, and a **Fraud & Security Shield** into a single seamless, vernacular-ready platform powered by **Google Gemini Multimodal AI** and **Groq LLaMA 3.3 70B**.
@@ -36,16 +36,15 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 - Scans screenshots and text of suspicious messages, emails, and fake invoices.
 - Evaluates phishing probability, identifies impersonation patterns, and outputs clear step-by-step remediation advice.
 
-### 4. 🔑 Dual-Channel Passwordless OTP Authentication
-- **Mobile SMS OTP**: Direct SMS delivery to mobile numbers (`+91`) via **Fast2SMS API**.
-- **Email OTP**: Secure 6-digit verification code dispatch via **SMTP**.
-- Pre-registration check auto-detects user status and guides users seamlessly between login and signup.
+### 4. 🔑 Passwordless Email OTP Authentication
+- Secure 6-digit verification code sent directly to user's registered email address.
+- Pre-registration check auto-detects user status on login, prompting unregistered users to sign up first.
 
 ### 5. 🌐 Vernacular Multilingual Support (i18n)
-- Native translation toggle supporting **English (US), Hindi (हिंदी), Telugu (తెలుగు), Tamil (தமிழ்), and Bengali (বাংলা)** across all pages and AI responses.
+- Native translation toggle supporting **English (US), Hindi (हिंदी), Telugu (తెలుగు), Tamil (தமிழ்), and Kannada (ಕನ್ನಡ)** across all pages and AI responses.
 
-### 6. 💬 Interactive Clarifying AI Chatbot
-- Context-aware floating AI assistant capable of answering follow-up queries on uploaded cases in real-time.
+### 6. 💬 Interactive Context-Aware Document Copilot
+- Dynamic floating AI assistant capable of answering follow-up queries on uploaded cases in natural, empathetic, 4-5 line multi-paragraph responses.
 
 ---
 
@@ -65,20 +64,20 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
                                        │                 │
            ┌───────────────────────────┴─┐             ┌─┴───────────────────────────┐
            │      AI Engine Layer        │             │  Authentication & Database  │
-           │  • Google Gemini 1.5/2.0    │             │  • Fast2SMS Mobile OTP API  │
-           │  • Groq LLaMA 3.3 70B       │             │  • SMTP Email Transport     │
+           │  • Google Gemini 1.5/2.0    │             │  • SMTP Email OTP Transport │
+           │  • Groq LLaMA 3.3 70B       │             │  • PyJWT Session Management │
            │  • Google Speech-to-Text    │             │  • MongoDB Atlas Cloud      │
            └─────────────────────────────┘             └─────────────────────────────┘
 ```
 
 ### In Simple Terms:
 - **Frontend (The User Interface)**: Built with **React 18** and **Vite** for lightning-fast page loads. Styled with modern **Tailwind CSS** using a curated Ocean Teal palette (`#006D77`, `#83C5BE`). Includes **i18next** for instant language switching.
-- **Backend (The Brain & Server)**: Built with **FastAPI (Python 3.11)**. Handles file uploads, user requests, OTP generation, and securely communicates with MongoDB and AI models asynchronously.
+- **Backend (The Brain & Server)**: Built with **FastAPI (Python 3.11)**. Handles file uploads, user requests, email OTP generation, and securely communicates with MongoDB and AI models asynchronously.
 - **Database (Data Storage)**: **MongoDB Atlas** (cloud database) securely storing encrypted user profiles, uploaded case reports, and chat histories.
 - **AI Core (Artificial Intelligence)**:
   - **Google Gemini SDK**: Analyzes uploaded PDFs, images, charts, and audio files.
   - **Groq LLaMA 3.3 70B**: Provides instant, ultra-low-latency real-time chat responses.
-- **Authentication**: **Fast2SMS** for mobile SMS OTPs + **SMTP** for email OTPs + **PyJWT** for secure user sessions.
+- **Authentication**: Passwordless 6-digit **SMTP Email OTP** verification + **PyJWT** for secure user sessions.
 
 ---
 
@@ -86,7 +85,7 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/send-otp` | Pre-checks user existence & dispatches OTP to Phone or Email |
+| `POST` | `/api/auth/send-otp` | Pre-checks user existence & dispatches 6-digit OTP to user's Email |
 | `POST` | `/api/auth/verify-otp` | Verifies 6-digit OTP code & returns JWT Access Token |
 | `GET` | `/api/auth/me` | Fetches authenticated user profile |
 | `POST` | `/api/cases/upload` | Processes uploaded file (PDF/Image/Audio/CSV) with Gemini Multimodal AI |
@@ -125,7 +124,6 @@ LOG_LEVEL=INFO
 PORT=8000
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
-FAST2SMS_API_KEY=your_fast2sms_api_key
 ```
 
 ### 2. Start Backend Server
@@ -152,6 +150,14 @@ npm run dev
 
 ---
 
+## 🗺️ Roadmap & Future Development
+
+### 🔮 Upcoming Features
+
+- **Trust Circle** — Users will be able to add trusted contacts (friends/family) and, with one click, share an AI-generated risk alert summary directly from a case's chat conversation — e.g. instantly warning a family member about a detected fraud attempt or health risk flagged in their own case. Alerts will be scoped to only the specific AI response shared, never raw uploaded evidence, keeping the same per-user/per-case data isolation already enforced elsewhere in the app.
+
+---
+
 ## 🌐 Live Cloud Deployment
 
 - **Frontend Hosting**: **Vercel** (`frontend` root directory, Vite preset, `VITE_API_BASE_URL` env variable)
@@ -163,17 +169,9 @@ npm run dev
 ## 🏆 Hackathon Impact Metrics
 
 - **⚡ < 3s AI Response Time**: Ultra-fast document parsing and streaming chat powered by Groq & Gemini.
-- **🔒 100% Passwordless Security**: Frictionless OTP login eliminating password breaches.
-- **🗣️ Vernacular Reach**: Native support for 5 major Indian languages bridging the digital divide.
+- **🔒 100% Passwordless Security**: Frictionless Email OTP login eliminating password breaches.
+- **🗣️ Vernacular Reach**: Native support for 5 major regional languages bridging the digital divide.
 - **🎯 90%+ Accuracy**: Multimodal structured fact extraction across health, legal, and security domains.
-
----
-
-## 🗺️ Future Insights & Planned Features
-
-### Planned Features
-
-- **Trust Circle** — Users will be able to add trusted contacts (friends/family) and, with one click, share an AI-generated risk alert summary directly from a case's chat conversation — e.g. instantly warning a family member about a detected fraud attempt or health risk flagged in their own case. Alerts will be scoped to only the specific AI response shared, never raw uploaded evidence, keeping the same per-user/per-case data isolation already enforced elsewhere in the app.
 
 ---
 
