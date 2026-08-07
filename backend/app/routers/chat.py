@@ -56,8 +56,37 @@ async def chat_with_assistant(
         "credit card", "debit card", "pin", "password", "tax", "customs",
         "fee", "forfeited", "logistics", "accounts department", "warehouse"
     ]
+    # Auto-re-extract OCR text for evidence items that have placeholder strings or missing text
+    from pathlib import Path
+    from app.services.speech_service import extract_text_from_file
+
     for c in user_cases:
-        ev_text = " ".join([e.get("extracted_text", "") for e in c.get("evidence", [])]).lower()
+        updated_ev_flag = False
+        evidence_list = c.get("evidence", [])
+        for ev in evidence_list:
+            cur_txt = (ev.get("extracted_text") or "").strip()
+            stored_path = ev.get("meta", {}).get("stored_path")
+            mime_type = ev.get("file_type") or "image/png"
+
+            if (not cur_txt or "uploaded document:" in cur_txt.lower() or "preserved for ai" in cur_txt.lower() or len(cur_txt) < 80) and stored_path:
+                p = Path(stored_path)
+                if p.exists():
+                    try:
+                        fresh_text = await extract_text_from_file(p, mime_type)
+                        if fresh_text and "uploaded document:" not in fresh_text.lower():
+                            ev["extracted_text"] = fresh_text
+                            updated_ev_flag = True
+                    except Exception as ocr_err:
+                        pass
+
+        if updated_ev_flag:
+            try:
+                await db.cases.update_one({"_id": c["_id"]}, {"$set": {"evidence": evidence_list}})
+            except Exception as update_err:
+                pass
+
+        # Auto-correct case department if evidence or query contains fraud/scam/invoice indicators
+        ev_text = " ".join([e.get("extracted_text", "") for e in evidence_list]).lower()
         if c.get("department") != "fraud" and any(k in ev_text for k in fraud_keywords):
             c["department"] = "fraud"
             try:
