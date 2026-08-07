@@ -373,12 +373,26 @@ const Dashboard = () => {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        {/* ── Dynamic Claude-Style Greeting Header ── */}
+        {/* ── Dynamic Claude-Style Greeting Header with Animated SVG ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold font-serif text-[#006D77] tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-serif text-[#006D77] tracking-tight flex items-center gap-3">
               <span>{salutation}</span>
-              <span className="inline-block animate-bounce">👋</span>
+              {/* Dynamic Animated Sparkle & Wave SVG Graphic */}
+              <div className="inline-flex items-center space-x-1.5 relative">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#006D77] animate-spin-slow drop-shadow-sm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="url(#sparkle-grad)" stroke="#83C5BE" strokeWidth="0.75"/>
+                  <circle cx="12" cy="12" r="3" fill="#83C5BE" className="animate-pulse" />
+                  <defs>
+                    <linearGradient id="sparkle-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#006D77" />
+                      <stop offset="0.5" stopColor="#83C5BE" />
+                      <stop offset="1" stopColor="#003840" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <span className="inline-block animate-bounce text-2xl">👋</span>
+              </div>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
               {subtext}
@@ -452,7 +466,7 @@ const Dashboard = () => {
                 { label: t('dashboard.highRisk'), value: highRisk, color: '#e11d48', colorLight: '#fb7185' },
                 { label: t('dashboard.mediumRisk'), value: medRisk,  color: '#d97706', colorLight: '#fbbf24' },
                 { label: t('dashboard.lowRisk'),  value: lowRisk,  color: '#006D77', colorLight: '#83C5BE' },
-                { label: 'Pending',   value: noFindings > 0 ? noFindings : (total === 0 ? 1 : 0), color: '#94a3b8', colorLight: '#cbd5e1' },
+                { label: 'Pending',   value: noFindings > 0 ? noFindings : 0, color: '#94a3b8', colorLight: '#cbd5e1' },
               ].filter(s => s.value > 0)} />
             </div>
           </div>
