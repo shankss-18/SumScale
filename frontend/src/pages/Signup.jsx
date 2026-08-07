@@ -17,6 +17,7 @@ const Signup = () => {
   const [otpCode, setOtpCode] = useState('');
   const [timer, setTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ name: false, email: false });
 
   const [localError, setLocalError] = useState('');
   const { loginWithOTP, loading } = useAuth();
@@ -36,14 +37,15 @@ const Signup = () => {
   const handleSendOTP = async (e) => {
     e?.preventDefault();
     setLocalError('');
-    if (!fullName.trim()) {
-      setLocalError('Full name is required. Please enter your name.');
+    const hasNameErr = !fullName.trim();
+    const hasEmailErr = !identifier.trim() || !identifier.includes('@');
+    setFieldErrors({ name: hasNameErr, email: hasEmailErr });
+
+    if (hasNameErr || hasEmailErr) {
+      setLocalError('Please fill in all required fields marked below.');
       return;
     }
-    if (!identifier.trim() || !identifier.includes('@')) {
-      setLocalError('Email address is required. Please enter a valid email.');
-      return;
-    }
+
     setSendingOtp(true);
     try {
       await apiSendOTP(identifier.trim(), 'signup');
@@ -143,30 +145,46 @@ const Signup = () => {
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
                       <span>Your Name</span>
-                      <span className="text-[10px] text-rose-500 font-bold">* Mandatory</span>
+                      {fieldErrors.name && (
+                        <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                          ⚠️ Name is required
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      required
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => {
+                        setFullName(e.target.value);
+                        if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: false }));
+                      }}
                       placeholder="e.g. Alex Morgan"
-                      className="w-full px-4 py-3 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all font-medium"
+                      className={`w-full px-4 py-3 rounded-full bg-slate-50 border text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 transition-all font-medium ${
+                        fieldErrors.name ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-[#006D77] focus:ring-[#006D77]/20'
+                      }`}
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
                       <span>Email Address</span>
-                      <span className="text-[10px] text-rose-500 font-bold">* Mandatory</span>
+                      {fieldErrors.email && (
+                        <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                          ⚠️ Email address is required
+                        </span>
+                      )}
                     </label>
                     <input
                       type="email"
-                      required
                       value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
+                      onChange={(e) => {
+                        setIdentifier(e.target.value);
+                        if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: false }));
+                      }}
                       placeholder="e.g. name@example.com"
-                      className="w-full px-4 py-3 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all font-medium"
+                      className={`w-full px-4 py-3 rounded-full bg-slate-50 border text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 transition-all font-medium ${
+                        fieldErrors.email ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-[#006D77] focus:ring-[#006D77]/20'
+                      }`}
                     />
                   </div>
 

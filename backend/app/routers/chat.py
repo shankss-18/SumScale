@@ -35,12 +35,21 @@ async def chat_with_assistant(
         raise HTTPException(status_code=500, detail="Database connection unavailable")
 
     # SECURITY RULE: Fetch ONLY cases owned by current_user.id, scoped strictly to case_id if provided
+    from bson import ObjectId
     query = {"user_id": current_user.id}
     if body.case_id:
-        query["_id"] = body.case_id
+        if ObjectId.is_valid(body.case_id):
+            query["$or"] = [{"_id": body.case_id}, {"_id": ObjectId(body.case_id)}]
+        else:
+            query["_id"] = body.case_id
 
     cursor = db.cases.find(query).sort("created_at", -1)
     user_cases = await cursor.to_list(length=50)
+
+    # Fallback to user's general cases if specific case_id lookup returned no records
+    if not user_cases:
+        cursor = db.cases.find({"user_id": current_user.id}).sort("created_at", -1)
+        user_cases = await cursor.to_list(length=50)
 
     result = await generate_grounded_chat_response(
         user_message=body.message.strip(),

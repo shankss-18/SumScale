@@ -99,20 +99,30 @@ def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
 
 def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
     """
-    Synchronous Gemini text generation call.
+    Synchronous Gemini text generation call with automatic model fallback.
     Returns the response text string.
-    Raises on failure.
     """
     client = get_genai_client()
-    response = client.models.generate_content(
-        model=GEMINI_TEXT_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=temperature,
-        ),
-    )
-    return response.text
+    models_to_try = [GEMINI_TEXT_MODEL, "gemini-2.0-flash", "gemini-1.5-pro"]
+    last_err = None
+
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=temperature,
+                ),
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            logger.warning(f"Gemini text model {model_name} failed: {e}. Trying next model...")
+            last_err = e
+
+    raise last_err or RuntimeError("All Gemini text models failed")
 
 
 def call_text_llm(prompt: str, temperature: float = 0.3) -> str:
