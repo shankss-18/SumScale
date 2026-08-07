@@ -27,15 +27,17 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
     summary = findings.get("summary") or findings.get("pattern_classification") or "Case intake completed."
-    
+
     checklist = findings.get("remediation_checklist") or findings.get("otc_suggestions") or []
     likely_assoc = findings.get("likely_associations") or []
     escalation_reason = findings.get("escalation_reason") or ""
-    severity = findings.get("severity") or findings.get("escalation_flag") or "medium"
-    
+    severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").upper()
+
     evidence_text = ""
     if latest_case.get("evidence"):
-        evidence_text = latest_case["evidence"][0].get("extracted_text", "")
+        raw_ev = latest_case["evidence"][0].get("extracted_text", "")
+        if "extraction failed" not in raw_ev.lower():
+            evidence_text = raw_ev
 
     if threat_report:
         res = f"I have run a real-time threat intelligence verification on your query.\n\n{threat_report}\n\n"
@@ -43,46 +45,61 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
         return res
 
     msg_lower = user_message.lower()
+
+    # Intent 1: Risk Factors / Severity / Danger
+    is_risk_query = any(k in msg_lower for k in ["risk", "factor", "severity", "danger", "level", "high alert", "threat"])
+    
+    # Intent 2: Problem / Diagnosis / Condition / Issue
+    is_problem_query = any(k in msg_lower for k in ["problem", "issue", "diagnosis", "condition", "what wrong", "symptom", "disease", "sick", "illness"])
+
+    # Intent 3: Precautions / Steps / Treatments / What should I do
+    is_precaution_query = any(k in msg_lower for k in ["precaution", "step", "action", "guidance", "treatment", "cure", "remedy", "what to do", "how to treat", "how to handle"])
+
     ans_lines = [f"Based on your case records (**{summary}**):\n"]
 
-    if any(k in msg_lower for k in ["precaution", "step", "action", "do", "guidance", "treatment", "cure", "remedy"]):
+    if is_risk_query:
+        ans_lines.append(f"• **Assessed Risk Level**: `{severity}`")
+        if likely_assoc:
+            ans_lines.append(f"• **Key Risk Indicators**: {', '.join(likely_assoc)}")
+        if escalation_reason:
+            ans_lines.append(f"• **Evaluation**: {escalation_reason}")
+        else:
+            ans_lines.append("• **Evaluation**: Moderate indicators detected. Keep monitoring for any changes.")
+
+    elif is_problem_query:
+        ans_lines.append(f"• **Primary Condition / Finding**: {summary}")
+        if likely_assoc:
+            ans_lines.append(f"• **Likely Associations**: {', '.join(likely_assoc)}")
+        if escalation_reason:
+            ans_lines.append(f"• **Assessment Note**: {escalation_reason}")
+        ans_lines.append(f"• **Overall Risk Rating**: `{severity}`")
+
+    elif is_precaution_query:
         if checklist:
             ans_lines.append("**Recommended Steps & Precautions:**")
             for item in checklist:
                 ans_lines.append(f"• {item}")
         elif escalation_reason:
             ans_lines.append(f"• **Primary Precaution**: {escalation_reason}")
-            ans_lines.append("• Consult a certified specialist or official support for further evaluation.")
+            ans_lines.append("• Consult a certified healthcare specialist or official support for further evaluation.")
         else:
-            ans_lines.append("• Keep all original documents and receipts safely saved.")
-            ans_lines.append("• Avoid sharing OTPs, passwords, or personal health info over unverified channels.")
-            ans_lines.append("• Monitor for changes or escalation in your symptoms/case status.")
-
-    elif any(k in msg_lower for k in ["risk", "factor", "severity", "danger", "level", "high", "alert"]):
-        ans_lines.append(f"• **Assessed Risk Rating**: `{severity.upper()}`")
-        if likely_assoc:
-            ans_lines.append(f"• **Associated Indicators**: {', '.join(likely_assoc)}")
-        if escalation_reason:
-            ans_lines.append(f"• **Assessment Reason**: {escalation_reason}")
-
-    elif any(k in msg_lower for k in ["explain", "meaning", "term", "what is", "concept", "detail"]):
-        ans_lines.append(f"**Case Context**: {summary}")
-        if likely_assoc:
-            ans_lines.append(f"**Key Concepts Identified**: {', '.join(likely_assoc)}")
-        if evidence_text:
-            ans_lines.append(f"**Document Record**: {evidence_text[:300]}")
+            ans_lines.append("• Keep all original documents and health notes safely stored.")
+            ans_lines.append("• Stay hydrated and get adequate rest.")
+            ans_lines.append("• Monitor for changes or escalation in your symptoms.")
 
     else:
+        if summary and summary != "Assessment completed based on provided details.":
+            ans_lines.append(f"**Case Summary**: {summary}")
+        if likely_assoc:
+            ans_lines.append(f"**Identified Patterns**: {', '.join(likely_assoc)}")
         if checklist:
-            ans_lines.append("**Key Guidance & Action Items:**")
+            ans_lines.append("**Action Items & Self-Care:**")
             for item in checklist:
                 ans_lines.append(f"• {item}")
-        elif likely_assoc:
-            ans_lines.append(f"**Identified Concepts / Pattern**: {', '.join(likely_assoc)}")
         elif escalation_reason:
-            ans_lines.append(f"**Evaluation Summary**: {escalation_reason}")
-        else:
-            ans_lines.append(f"Summary: {summary}")
+            ans_lines.append(f"**Note**: {escalation_reason}")
+        if evidence_text:
+            ans_lines.append(f"**Record Detail**: {evidence_text[:250]}")
 
     ans_lines.append("\nWould you like me to set up an email notification or Google Calendar reminder for this case?")
     return "\n".join(ans_lines)
