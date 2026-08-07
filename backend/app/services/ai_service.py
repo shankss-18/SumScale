@@ -334,13 +334,74 @@ Return ONLY a valid JSON object matching this schema:
         findings = clean_json_response(raw)
     except Exception as e:
         logger.error(f"Error during Health reasoning pass: {e}")
+        # Build a contextual fallback using whatever facts were actually extracted,
+        # so downstream chat answers are not polluted with generic boilerplate strings.
+        _symptoms = merged_facts.get("symptoms") or []
+        _body_part = merged_facts.get("body_part") or ""
+        _meds = merged_facts.get("medications_mentioned") or []
+        _conditions = merged_facts.get("existing_conditions_mentioned") or []
+        _duration = merged_facts.get("duration") or "unknown duration"
+        _severity = merged_facts.get("severity_self_reported") or "unknown"
+        _report_summary = merged_facts.get("report_summary") or ""
+        _visual = merged_facts.get("visual_findings") or ""
+
+        # Compose a meaningful summary from whatever was actually found
+        _summary_parts = []
+        if _symptoms:
+            _summary_parts.append(f"Reported symptoms: {', '.join(_symptoms)}")
+        if _body_part and _body_part.lower() not in ("unknown", ""):
+            _summary_parts.append(f"affected area: {_body_part}")
+        if _duration and _duration.lower() not in ("unknown", ""):
+            _summary_parts.append(f"for {_duration}")
+        if _report_summary and _report_summary.lower() not in ("none", ""):
+            _summary_parts.append(_report_summary)
+        if _visual and _visual.lower() not in ("none", ""):
+            _summary_parts.append(f"Visual findings: {_visual}")
+
+        _summary = ". ".join(_summary_parts) if _summary_parts else "Uploaded health documents have been processed."
+
+        # Likely associations: use conditions + symptoms if available
+        _assoc = []
+        if _conditions:
+            _assoc.extend(_conditions[:2])
+        if _symptoms:
+            _assoc.extend([s for s in _symptoms[:3] if s not in _assoc])
+        if not _assoc:
+            _assoc = ["Consult a healthcare professional for a precise diagnosis"]
+
+        # OTC suggestions: personalise based on symptoms if possible
+        _otc = []
+        if _meds:
+            _otc.extend([f"Continue {m} as prescribed" for m in _meds[:2]])
+        if _symptoms:
+            _symptom_lower = " ".join(_symptoms).lower()
+            if any(k in _symptom_lower for k in ["fever", "temperature", "cold", "flu"]):
+                _otc.append("Stay hydrated and rest — consider paracetamol for fever management")
+            if any(k in _symptom_lower for k in ["pain", "ache", "headache"]):
+                _otc.append("Over-the-counter analgesics may help; consult your pharmacist")
+            if any(k in _symptom_lower for k in ["cough", "throat", "congestion"]):
+                _otc.append("Warm fluids, honey, and steam inhalation can help relieve congestion")
+        if not _otc:
+            _otc = ["Rest and stay hydrated", "Avoid strenuous activity until reviewed by a doctor"]
+
+        # Escalation flag based on self-reported severity
+        _flag = {"mild": "low", "moderate": "medium", "severe": "high"}.get(_severity.lower(), "medium")
+
+        # Escalation reason
+        if _conditions:
+            _esc_reason = f"Pre-existing conditions ({', '.join(_conditions[:2])}) may interact with current symptoms and warrant professional evaluation."
+        elif _severity.lower() == "severe":
+            _esc_reason = "Self-reported severity is high — prompt medical attention is recommended."
+        else:
+            _esc_reason = "Symptoms and findings should be reviewed by a qualified healthcare professional."
+
         findings = {
-            "summary": "Assessment completed based on provided details.",
-            "likely_associations": ["Common viral or physiological reaction"],
-            "otc_suggestions": ["Stay hydrated", "Rest"],
+            "summary": _summary,
+            "likely_associations": _assoc,
+            "otc_suggestions": _otc,
             "educational_resources": [],
-            "escalation_flag": "medium",
-            "escalation_reason": "Please consult a healthcare professional for persistent symptoms.",
+            "escalation_flag": _flag,
+            "escalation_reason": _esc_reason,
             "suggest_nearby_doctor": True,
             "disclaimer": "This is decision-support only. It is not a medical diagnosis and does not replace a doctor.",
         }
