@@ -1,7 +1,7 @@
 # 🌟 SumScale — Multimodal AI Life-Assistant
 
 > **Reach your data in any format.**
-> SumScale is a next-generation Multimodal AI Life-Assistant that converts complex documents, live voice notes, scanned medical reports, financial datasets, and suspicious messages into instant, actionable real-world solutions.
+> SumScale is a next-generation Multimodal AI Life-Assistant that understands documents, voice, spreadsheets, and suspicious messages — turning them into instant, actionable real-world decisions.
 
 ---
 
@@ -15,7 +15,7 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 3. **Cyber Fraud & Scams** — Increasing prevalence of fake invoices, phishing messages, and impersonation attempts targeting non-technical users.
 
 ### The Solution
-**SumScale** unifies **Document Digitisation**, **Speech & Voice Intelligence**, and a **Fraud & Security Shield** into a single seamless, vernacular-ready platform powered by **Google Gemini Multimodal AI** and **Groq LLaMA 3.3 70B**.
+**SumScale** is a single AI Life Assistant that understands every type of human data — documents, spreadsheets, voice, and images — and turns it into summaries, reminders, protection, and decisions, powered by **Google Gemini Multimodal AI** and **Groq LLaMA 3.3 70B**.
 
 **🔗 Live Demo:** [sum-scale.vercel.app](https://sum-scale.vercel.app)
 
@@ -31,19 +31,47 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 - Native browser microphone capture (`HTML5 MediaRecorder`) with live waveform visualization.
 - Instant multilingual Speech-to-Text transcription and contextual AI summarization.
 
-### 3. 🛡️ Fraud & Security Shield
+### 3. 📊 Spreadsheet Intelligence & Calendar Reminders
+- Upload large spreadsheets (CSV/XLSX) for instant AI-powered summarization of trends, totals, and key figures.
+- Automatically detects deadlines, due dates, and renewal dates buried in the data.
+- Sets reminders directly to **Google Calendar** from any detected date, in one click.
+
+### 4. 📅 AI Event Planner
+- Automatically detects appointments, deadlines, follow-ups, and important dates from uploaded documents.
+- Creates intelligent reminders so users never miss medical appointments, payments, or important meetings.
+
+### 5. 📝 AI Smart Summarizer
+- Converts lengthy PDFs, reports, meeting transcripts, and datasets into concise summaries.
+- Highlights key findings, risks, action items, and recommendations.
+
+### 6. 🛡️ Fraud & Security Shield
 - Scans screenshots and text of suspicious messages, emails, and fake invoices.
+- Verifies URLs, phone numbers, domains, and IP addresses using multiple threat-intelligence services, including **VirusTotal**, **Google Safe Browsing**, **IPQualityScore**, and **WhoisXML**.
 - Evaluates phishing probability, identifies impersonation patterns, and outputs clear step-by-step remediation advice.
 
-### 4. 🔑 Passwordless Email OTP Authentication
-- Secure 6-digit verification code sent directly to a user's registered email address.
+### 7. 📍 Nearby Expert Recommendation
+- Detects the type of issue from uploaded documents.
+- Recommends nearby hospitals, doctors, pharmacies, service centers, or cybercrime support based on the user's location.
+
+### 8. ⏰ Smart Reminder Engine
+- Automatically creates reminders from AI analysis.
+- Sends notifications for follow-ups, medicine schedules, payments, and important deadlines.
+
+### 9. 🔊 AI Voice Assistant
+- Every AI response is available in both text and speech.
+- Supports multilingual voice interaction for improved accessibility.
+
+### 10. 🔑 Secure Email OTP Authentication
+- 6-digit verification code sent directly to a user's registered email address — no passwords required.
 - Pre-registration check auto-detects user status on login, prompting unregistered users to sign up first.
+- Session management via **PyJWT**.
 
-### 5. 🌐 Vernacular Multilingual Support (i18n)
-- Native translation toggle supporting **English (US), Hindi (हिंदी), Telugu (తెలుగు), Tamil (தமிழ்), and Kannada (ಕన್నడ)** across all pages and AI responses.
+### 11. 🌐 Vernacular Multilingual Support (i18n)
+- Native translation toggle supporting **English (US), Hindi (हिंदी), Telugu (తెలుగు), Tamil (தமிழ்), and Kannada (ಕన్నడ)** across all pages and AI responses.
 
-### 6. 💬 Interactive Context-Aware Document Copilot
+### 12. 💬 Interactive Context-Aware Document Copilot
 - Dynamic floating AI assistant capable of answering follow-up queries on uploaded cases in natural, empathetic, multi-paragraph responses.
+- Asks intelligent follow-up questions whenever uploaded information is incomplete.
 
 ---
 
@@ -75,7 +103,7 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 | **Backend** | **FastAPI (Python 3.11)** handles file uploads, user requests, email OTP generation, and securely communicates with MongoDB and AI models asynchronously. |
 | **Database** | **MongoDB Atlas** (cloud database) securely storing encrypted user profiles, uploaded case reports, and chat histories. |
 | **AI Core** | **Google Gemini SDK** analyzes uploaded PDFs, images, charts, and audio files. **Groq LLaMA 3.3 70B** provides instant, ultra-low-latency real-time chat responses. |
-| **Authentication** | Passwordless 6-digit **SMTP Email OTP** verification + **PyJWT** for secure user sessions. |
+| **Authentication** | Secure 6-digit **Email OTP** verification + **PyJWT** for secure user sessions. |
 
 ---
 
@@ -86,9 +114,10 @@ Every day, individuals and businesses struggle with unorganized, multi-format da
 | `POST` | `/api/auth/send-otp` | Pre-checks user existence & dispatches 6-digit OTP to user's email |
 | `POST` | `/api/auth/verify-otp` | Verifies 6-digit OTP code & returns JWT access token |
 | `GET` | `/api/auth/me` | Fetches authenticated user profile |
-| `POST` | `/api/cases/upload` | Processes uploaded file (PDF/Image/Audio/CSV) with Gemini Multimodal AI |
+| `POST` | `/api/cases/upload` | Processes uploaded file (PDF/Image/Audio/CSV/XLSX) with Gemini Multimodal AI |
 | `GET` | `/api/cases/` | Lists user cases with status & department categorization |
 | `GET` | `/api/cases/{id}` | Retrieves detailed analysis report for a specific case |
+| `POST` | `/api/reminders/calendar` | Pushes a detected date or deadline to the user's Google Calendar |
 | `POST` | `/api/chat/message` | Sends follow-up message to Groq/Gemini AI chatbot |
 | `GET` | `/health` | Healthcheck endpoint verifying MongoDB & AI service connections |
 
@@ -113,6 +142,8 @@ GEMINI_API_KEY=your_gemini_api_key
 GROQ_API_KEY=your_groq_api_key
 SPEECH_TO_TEXT_API_KEY=your_speech_key
 GOOGLE_PLACES_API_KEY=your_places_key
+GOOGLE_CALENDAR_CLIENT_ID=your_calendar_client_id
+GOOGLE_CALENDAR_CLIENT_SECRET=your_calendar_client_secret
 MONGODB_URL=your_mongodb_connection_string
 MONGODB_DB_NAME=omniaid
 JWT_SECRET_KEY=your_64_char_random_jwt_secret
@@ -165,12 +196,24 @@ npm run dev
 
 ---
 
-## 🏆 Impact Metrics
+## 🏆 Impact
 
-- **⚡ < 3s AI Response Time** — Ultra-fast document parsing and streaming chat powered by Groq & Gemini.
-- **🔒 100% Passwordless Security** — Frictionless Email OTP login eliminating password breaches.
-- **🗣️ Vernacular Reach** — Native support for 5 major regional languages bridging the digital divide.
-- **🎯 90%+ Accuracy** — Multimodal structured fact extraction across health, legal, and security domains.
+- ⚡ Multimodal AI across Documents, Spreadsheets, Images, Audio & Text
+- 🌍 5-language conversational support
+- 📝 AI-powered document & spreadsheet summarization
+- 📅 Automatic reminder generation, synced to Google Calendar
+- 📍 Nearby expert recommendations based on location
+- 🛡️ Fraud verification using multiple threat-intelligence APIs
+- 🔊 Voice + text AI responses
+- 🔒 Secure Email OTP authentication
+- 📂 Multiple document and data formats supported
+- 🤖 Context-aware conversational AI
+
+---
+
+## 🎯 Vision
+
+To build a single AI Life Assistant that understands every type of human data, provides trustworthy recommendations, protects users from fraud, remembers important events, and helps people make better decisions through natural conversations.
 
 ---
 
