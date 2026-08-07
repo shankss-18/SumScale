@@ -100,12 +100,13 @@ def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
 def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
     """
     Synchronous Gemini text generation call with automatic model fallback.
-    Returns the response text string.
+    Tries JSON mime_type first, then falls back to plain text mode.
     """
     client = get_genai_client()
-    models_to_try = [GEMINI_TEXT_MODEL, "gemini-2.0-flash", "gemini-1.5-pro"]
+    models_to_try = [GEMINI_TEXT_MODEL, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
     last_err = None
 
+    # Pass 1: Try with JSON response_mime_type
     for model_name in models_to_try:
         try:
             response = client.models.generate_content(
@@ -119,7 +120,23 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
             if response and response.text:
                 return response.text
         except Exception as e:
-            logger.warning(f"Gemini text model {model_name} failed: {e}. Trying next model...")
+            logger.warning(f"Gemini model {model_name} (JSON mode) failed: {e}")
+            last_err = e
+
+    # Pass 2: Try without JSON response_mime_type (plain text mode)
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=temperature,
+                ),
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            logger.warning(f"Gemini model {model_name} (plain text mode) failed: {e}")
             last_err = e
 
     raise last_err or RuntimeError("All Gemini text models failed")
@@ -128,7 +145,7 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
 def call_text_llm(prompt: str, temperature: float = 0.3) -> str:
     """
     Unified text LLM caller — uses Groq if configured, with automatic fallback to Gemini.
-    Returns raw response string (JSON text).
+    Returns raw response string.
     """
     if _use_groq:
         try:
@@ -143,7 +160,7 @@ def call_text_llm(prompt: str, temperature: float = 0.3) -> str:
 
 
 def clean_json_response(raw_text: str) -> Dict[str, Any]:
-    """Parse JSON string safely even if wrapped in markdown block."""
+    """Parse JSON string safely even if wrapped in markdown block or plain text paragraph."""
     if not raw_text:
         raise ValueError("Empty response from AI engine")
     cleaned = raw_text.strip()
@@ -154,7 +171,19 @@ def clean_json_response(raw_text: str) -> Dict[str, Any]:
         if lines and lines[-1].startswith("```"):
             lines = lines[:-1]
         cleaned = "\n".join(lines).strip()
-    return json.loads(cleaned)
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        # Preserve LLM text output even if JSON parsing fails
+        return {
+            "answer": cleaned,
+            "cited_cases": [],
+            "suggested_next_questions": [
+                "What step-by-step precautions should I take?",
+                "What are the main risk factors in my document?",
+                "Explain key medical / technical terms simply"
+            ]
+        }
 
 
 # --------------------------------------------------------------------------
