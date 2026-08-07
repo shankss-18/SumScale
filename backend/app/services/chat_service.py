@@ -26,6 +26,7 @@ _RETRY_BASE_DELAY_S = 5  # seconds — grows exponentially per attempt
 def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]], threat_report: str = "") -> str:
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
+    dept = latest_case.get("department", "medical / document").capitalize()
     summary = findings.get("summary") or findings.get("pattern_classification") or "your uploaded records"
 
     if "assessment completed" in summary.lower():
@@ -34,7 +35,7 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
     checklist = findings.get("remediation_checklist") or findings.get("otc_suggestions") or []
     likely_assoc = findings.get("likely_associations") or []
     escalation_reason = findings.get("escalation_reason") or ""
-    severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").lower()
+    severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").upper()
 
     evidence_text = ""
     if latest_case.get("evidence"):
@@ -47,67 +48,53 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
         res += "Please review the risk scores above and take necessary precautions if any entity shows suspicious or malicious ratings."
         return res
 
-    msg_lower = user_message.lower()
+    # Paragraph 1: Case Context & Personalized Overview (4-5 lines)
+    assoc_str = f" (**{', '.join(likely_assoc)}**)" if likely_assoc else ""
+    p1 = (
+        f"**Case Context & Overview**: Based on your uploaded {dept} records regarding **{summary}**, "
+        f"our analysis has identified an overall risk rating of **{severity}**{assoc_str}. "
+        f"The primary context of your inquiry relates directly to understanding the underlying reasons, potential complications, "
+        f"and the safest path forward based on your documented evidence."
+    )
 
-    # Intent 1: Risk Factors / Severity / Danger / Why / Reason
-    is_risk_or_reason_query = any(k in msg_lower for k in ["risk", "factor", "severity", "danger", "level", "threat", "reason", "cause", "why"])
-
-    # Intent 2: Problem / Diagnosis / Condition / Issue / Report
-    is_problem_query = any(k in msg_lower for k in ["problem", "issue", "diagnosis", "condition", "what wrong", "symptom", "disease", "sick", "illness", "report", "finding"])
-
-    # Intent 3: Precautions / Steps / Remedies / What to do
-    is_precaution_query = any(k in msg_lower for k in ["precaution", "step", "action", "guidance", "treatment", "cure", "remedy", "what to do", "how to treat", "how to handle"])
-
-    paragraphs = []
-
-    if is_risk_or_reason_query:
-        if likely_assoc:
-            assoc_str = ", ".join(likely_assoc)
-            paragraphs.append(f"Based on your uploaded case records, the primary pattern identified is **{assoc_str}**. The evaluated risk rating for this record is **{severity.upper()}**.")
-        else:
-            paragraphs.append(f"Looking closely at your uploaded records regarding **{summary}**, the evaluation indicates a **{severity.upper()}** severity level.")
-
-        if escalation_reason:
-            paragraphs.append(f"The primary reason behind this assessment: {escalation_reason}")
-        else:
-            paragraphs.append("While these findings are generally manageable, it is essential to monitor your symptoms closely and seek professional guidance if anything changes.")
-
-    elif is_problem_query:
-        paragraphs.append(f"After analyzing your uploaded documents, the primary condition noted in your records is **{summary}**.")
-        if likely_assoc:
-            paragraphs.append(f"This is commonly associated with **{', '.join(likely_assoc)}**. The overall assessed risk level for this finding is **{severity.upper()}**.")
-        if escalation_reason:
-            paragraphs.append(f"Key note from your case report: {escalation_reason}")
-
-    elif is_precaution_query:
-        paragraphs.append(f"To address your condition ({summary}) safely and effectively, here are the key step-by-step precautions you should keep in mind:")
-        if checklist:
-            for item in checklist:
-                paragraphs.append(f"• {item}")
-        elif escalation_reason:
-            paragraphs.append(f"• {escalation_reason}")
-            paragraphs.append("• Consult a qualified doctor or healthcare specialist for further evaluation.")
-        else:
-            paragraphs.append("• Stay well hydrated and get adequate rest.")
-            paragraphs.append("• Keep a close eye on any changing symptoms.")
-            paragraphs.append("• Keep all original medical test reports safely stored.")
-
+    # Paragraph 2: Strategic Approach & Reason / Insight (4-5 lines)
+    if escalation_reason:
+        p2 = (
+            f"**Recommended Approach & Insights**: Looking deeper into your records, the main factor contributing to this assessment is: "
+            f"*{escalation_reason}*. When approaching this situation, it is important to evaluate how your condition or findings "
+            f"evolve over time rather than treating it in isolation. Maintaining a clear timeline of changes will help you and your "
+            f"specialist make informed decisions."
+        )
+    elif likely_assoc:
+        p2 = (
+            f"**Recommended Approach & Insights**: To approach this effectively, keep in mind that the identified pattern ({', '.join(likely_assoc)}) "
+            f"typically requires a balanced, observant approach. You should monitor whether symptoms escalate, remain stable, or resolve, "
+            f"while avoiding unnecessary panic or unverified treatments."
+        )
     else:
-        paragraphs.append(f"I have reviewed your case records regarding **{summary}**.")
-        if likely_assoc:
-            paragraphs.append(f"The analysis highlights key indicators such as **{', '.join(likely_assoc)}**, with a **{severity.upper()}** risk rating.")
-        if checklist:
-            paragraphs.append("Key self-care guidance:")
-            for item in checklist:
-                paragraphs.append(f"• {item}")
-        elif escalation_reason:
-            paragraphs.append(f"Assessment detail: {escalation_reason}")
-        if evidence_text:
-            paragraphs.append(f"Record excerpt: {evidence_text[:250]}")
+        p2 = (
+            f"**Recommended Approach & Insights**: In approaching your case, the key is structured observation and careful self-care. "
+            f"Because your records show a **{severity}** risk profile, taking proactive early measures prevents minor issues from escalating "
+            f"into more complex health or security concerns."
+        )
 
-    paragraphs.append("\nWould you like me to set up an email notification or add a follow-up reminder to your Google Calendar for this case?")
+    # Paragraph 3: Actionable Step-by-Step Guidance (4-5 lines)
+    if checklist:
+        steps_str = " ".join([f"({idx+1}) {item}." for idx, item in enumerate(checklist)])
+        p3 = (
+            f"**Actionable Next Steps & Precautions**: Here are the specific, step-by-step actions you should take right now: "
+            f"{steps_str} Additionally, ensure that all original test reports, doctor notes, and receipts are safely preserved for future reference."
+        )
+    else:
+        p3 = (
+            f"**Actionable Next Steps & Precautions**: (1) Stay well hydrated and get adequate physical rest. "
+            f"(2) Keep a daily log of any new or changing symptoms or observations. "
+            f"(3) Consult a certified healthcare professional or specialist for a thorough clinical examination if persistent issues continue."
+        )
 
-    return "\n\n".join(paragraphs)
+    p4 = "Would you like me to set up an automatic email alert or add a follow-up reminder to your Google Calendar for this case?"
+
+    return f"{p1}\n\n{p2}\n\n{p3}\n\n{p4}"
 
 
 import re
