@@ -21,19 +21,19 @@ logger = logging.getLogger("omniaid.multimodal_extractor")
 import base64
 
 def _call_groq_vision(file_bytes: bytes, mime_type: str, prompt: str) -> str:
-    """Fallback image text extraction using Groq Vision models."""
+    """Fallback image text extraction using active Groq Vision models."""
     try:
         from app.services.ai_service import get_groq_client
         client = get_groq_client()
         if not client:
             return ""
 
-        # Normalize mime type for data URL
         clean_mime = mime_type if "/" in mime_type else "image/png"
         b64_str = base64.b64encode(file_bytes).decode("utf-8")
         data_url = f"data:{clean_mime};base64,{b64_str}"
 
-        vision_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
+        # Active non-decommissioned Groq Vision models
+        vision_models = ["llama-3.2-11b-vision-instruct", "llama-3.2-90b-vision-instruct"]
         for model_name in vision_models:
             try:
                 res = client.chat.completions.create(
@@ -61,40 +61,39 @@ def _call_groq_vision(file_bytes: bytes, mime_type: str, prompt: str) -> str:
     return ""
 
 
-def _call_pollinations_vision(file_bytes: bytes, mime_type: str, prompt: str) -> str:
-    """Fallback image OCR using public Pollinations Vision API (OpenAI Vision)."""
+def _call_ocr_space(file_bytes: bytes, mime_type: str) -> str:
+    """Fallback OCR using OCR.space free API engine."""
     import httpx
     try:
-        clean_mime = mime_type if "/" in mime_type else "image/png"
-        b64_str = base64.b64encode(file_bytes).decode("utf-8")
-        data_url = f"data:{clean_mime};base64,{b64_str}"
-
+        url = "https://api.ocr.space/parse/image"
         payload = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Extract all visible text, numbers, dates, emails, headers, UPI IDs, claimed amounts, and addresses from this image accurately. Return plain text summary/transcription ONLY."},
-                        {"type": "image_url", "image_url": {"url": data_url}},
-                    ],
-                }
-            ],
-            "model": "openai",
+            "apikey": "helloworld",
+            "language": "eng",
+            "isOverlayRequired": False,
+            "detectOrientation": True,
+            "scale": True,
+            "OCREngine": "2"
         }
-        with httpx.Client(timeout=30.0) as http_client:
-            res = http_client.post("https://text.pollinations.ai/", json=payload)
-            if res.status_code == 200 and res.text and len(res.text.strip()) > 10:
-                logger.info("Multimodal extraction success via Pollinations Vision!")
-                return res.text.strip()
+        files = {"file": ("document.png", file_bytes, mime_type)}
+        with httpx.Client(timeout=25.0) as http_client:
+            res = http_client.post(url, data=payload, files=files)
+            if res.status_code == 200:
+                data = res.json()
+                results = data.get("ParsedResults", [])
+                if results and results[0].get("ParsedText"):
+                    txt = results[0]["ParsedText"].strip()
+                    if txt and len(txt) > 10:
+                        logger.info("OCR.space free engine extraction success!")
+                        return txt
     except Exception as exc:
-        logger.warning(f"Pollinations Vision call failed: {exc}")
+        logger.warning(f"OCR.space engine call failed: {exc}")
     return ""
 
 
 async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
     """
     Extracts text/transcript from PDF, image, audio, or text file.
-    Uses Gemini, Groq & Pollinations Vision multimodal input for image/audio/pdf,
+    Uses Gemini, Groq & OCR.space multimodal input for image/audio/pdf,
     or direct UTF-8 reading for plain text / CSV.
     """
     # Plain text / CSV files read directly
@@ -106,7 +105,6 @@ async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
             logger.error(f"Failed to read text file {file_path}: {e}")
             return f"Document file {file_path.name} attached for review."
 
-    # For binary files (PDF, images, audio), pass to Gemini, Groq Vision, or Pollinations Vision
     client = get_genai_client()
 
     try:
@@ -146,13 +144,13 @@ Return plain text summary/transcription ONLY.
             except Exception as e:
                 logger.warning(f"Multimodal extraction failed with {model_name} for {file_path.name}: {type(e).__name__}: {e}")
 
-        # Fallback 1: Groq Vision
+        # Fallback 1: Groq Vision (llama-3.2-11b-vision-instruct)
         if not extracted and mime_type.startswith("image/"):
             extracted = _call_groq_vision(file_bytes, mime_type, prompt)
 
-        # Fallback 2: Pollinations Vision (100% Free OpenAI Vision)
+        # Fallback 2: OCR.space Engine
         if not extracted and mime_type.startswith("image/"):
-            extracted = _call_pollinations_vision(file_bytes, mime_type, prompt)
+            extracted = _call_ocr_space(file_bytes, mime_type)
 
         if not extracted or "content extraction failed" in extracted.lower():
             logger.warning(f"Using default fallback descriptor for {file_path.name}")
