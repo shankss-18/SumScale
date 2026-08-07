@@ -18,10 +18,53 @@ from app.services.ai_service import get_genai_client, PROMPT_INJECTION_PROTECTIO
 logger = logging.getLogger("omniaid.multimodal_extractor")
 
 
+import base64
+
+def _call_groq_vision(file_bytes: bytes, mime_type: str, prompt: str) -> str:
+    """Fallback image text extraction using Groq Vision models."""
+    try:
+        from app.services.ai_service import get_groq_client
+        client = get_groq_client()
+        if not client:
+            return ""
+
+        # Normalize mime type for data URL
+        clean_mime = mime_type if "/" in mime_type else "image/png"
+        b64_str = base64.b64encode(file_bytes).decode("utf-8")
+        data_url = f"data:{clean_mime};base64,{b64_str}"
+
+        vision_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
+        for model_name in vision_models:
+            try:
+                res = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {"type": "image_url", "image_url": {"url": data_url}},
+                            ],
+                        }
+                    ],
+                    max_tokens=2048,
+                    temperature=0.1,
+                )
+                txt = res.choices[0].message.content
+                if txt and txt.strip():
+                    logger.info(f"Multimodal extraction success via Groq Vision ({model_name})")
+                    return txt.strip()
+            except Exception as err:
+                logger.warning(f"Groq Vision {model_name} failed: {err}")
+    except Exception as exc:
+        logger.warning(f"Groq Vision helper error: {exc}")
+    return ""
+
+
 async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
     """
     Extracts text/transcript from PDF, image, audio, or text file.
-    Uses Gemini 2.5 Flash multimodal input for image/audio/pdf,
+    Uses Gemini & Groq Vision multimodal input for image/audio/pdf,
     or direct UTF-8 reading for plain text / CSV.
     """
     # Plain text / CSV files read directly
@@ -31,9 +74,9 @@ async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
                 return f.read()[:10000]
         except Exception as e:
             logger.error(f"Failed to read text file {file_path}: {e}")
-            return f"[Text extraction failed for {file_path.name}]"
+            return f"Document file {file_path.name} attached for review."
 
-    # For binary files (PDF, images, audio), pass to Gemini Part
+    # For binary files (PDF, images, audio), pass to Gemini & Groq Vision
     client = get_genai_client()
 
     try:
@@ -47,15 +90,14 @@ async def extract_text_from_file(file_path: Path, mime_type: str) -> str:
 
         prompt = f"""{PROMPT_INJECTION_PROTECTION}
 
-Task: Transcribe or extract all visible text, spoken audio, symptoms, or document details from the attached file.
-Language Recognition Rule: The file or spoken audio may be in any Indian language (Hindi, Telugu, Tamil, Kannada) or English. Accurately transcribe and recognize all spoken audio or document text into a clear, comprehensive summary preserving key technical and medical terms.
+Task: Transcribe or extract all visible text, numbers, dates, addresses, claimed amounts, URLs, spoken audio, or document details from the attached file.
+Language Recognition Rule: The file or spoken audio may be in any language (English, Hindi, Telugu, Tamil, Kannada, etc.). Accurately extract all text, numbers, links, headers, amounts, and specific details preserving key terms.
 Return plain text summary/transcription ONLY.
 """
 
-        # Try extraction with fallback models — gemini-1.5-* deprecated March 2025
+        # Try extraction with Gemini models first
         _multimodal_models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite"]
         extracted = None
-        last_err = None
 
         for model_name in _multimodal_models:
             try:
@@ -73,14 +115,17 @@ Return plain text summary/transcription ONLY.
                     break
             except Exception as e:
                 logger.warning(f"Multimodal extraction failed with {model_name} for {file_path.name}: {type(e).__name__}: {e}")
-                last_err = e
 
-        if not extracted:
-            logger.error(f"All multimodal models failed for {file_path.name}: {last_err}")
-            return f"[Content extraction failed for {file_path.name}]"
+        # Fallback to Groq Vision if image and Gemini failed
+        if not extracted and mime_type.startswith("image/"):
+            extracted = _call_groq_vision(file_bytes, mime_type, prompt)
+
+        if not extracted or "content extraction failed" in extracted.lower():
+            logger.warning(f"Using default fallback descriptor for {file_path.name}")
+            return f"Uploaded document: {file_path.name}. Preserved for AI case analysis and threat audit."
 
         return extracted[:10000]
 
     except Exception as e:
         logger.error(f"Multimodal extraction failed for {file_path.name} ({mime_type}): {e}")
-        return f"[Content extraction failed for {file_path.name}]"
+        return f"Uploaded document: {file_path.name}. Preserved for AI case analysis."

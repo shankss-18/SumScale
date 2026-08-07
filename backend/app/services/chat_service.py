@@ -333,7 +333,7 @@ async def generate_grounded_chat_response(
         evidence_details = []
         for idx, ev in enumerate(c.get("evidence", []), 1):
             extracted = (ev.get("extracted_text") or "").strip()
-            if extracted:
+            if extracted and "content extraction failed" not in extracted.lower():
                 ev_type = ev.get("type") or ev.get("artifact_type") or f"document_{idx}"
                 evidence_details.append({
                     "document_type": ev_type,
