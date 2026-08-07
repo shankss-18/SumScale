@@ -24,77 +24,117 @@ _RETRY_BASE_DELAY_S = 5  # seconds — grows exponentially per attempt
 
 
 def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str, Any]], threat_report: str = "") -> str:
+    """
+    Generates a message-SPECIFIC fallback answer when the LLM call fails.
+    Reads the user's actual question and tries to answer it from case data,
+    instead of always returning the same generic boilerplate.
+    """
+    import random
+
+    if threat_report:
+        return (
+            f"I ran a live threat intelligence check on that for you.\n\n{threat_report}\n\n"
+            "Take a look at the risk scores above — if anything shows as suspicious or malicious, "
+            "please don't engage with it further and report it to the relevant authorities."
+        )
+
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
-    dept = latest_case.get("department", "medical / document").capitalize()
-    summary = findings.get("summary") or findings.get("pattern_classification") or "your uploaded records"
-
-    if "assessment completed" in summary.lower():
-        summary = "your uploaded case evidence and findings"
-
+    dept = (latest_case.get("department") or "document").lower()
+    summary = findings.get("summary") or findings.get("pattern_classification") or ""
     checklist = findings.get("remediation_checklist") or findings.get("otc_suggestions") or []
     likely_assoc = findings.get("likely_associations") or []
     escalation_reason = findings.get("escalation_reason") or ""
-    severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").upper()
+    severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").lower()
 
-    evidence_text = ""
-    if latest_case.get("evidence"):
-        raw_ev = latest_case["evidence"][0].get("extracted_text", "")
-        if "extraction failed" not in raw_ev.lower():
-            evidence_text = raw_ev
+    msg_lower = user_message.lower()
 
-    if threat_report:
-        res = f"I have run a real-time threat intelligence verification on your query.\n\n{threat_report}\n\n"
-        res += "Please review the risk scores above and take necessary precautions if any entity shows suspicious or malicious ratings."
-        return res
+    # --- Answer based on what the user actually asked ---
 
-    # Paragraph 1: Case Context & Personalized Overview (4-5 lines)
-    assoc_str = f" (**{', '.join(likely_assoc)}**)" if likely_assoc else ""
-    p1 = (
-        f"**Case Context & Overview**: Based on your uploaded {dept} records regarding **{summary}**, "
-        f"our analysis has identified an overall risk rating of **{severity}**{assoc_str}. "
-        f"The primary context of your inquiry relates directly to understanding the underlying reasons, potential complications, "
-        f"and the safest path forward based on your documented evidence."
-    )
-
-    # Paragraph 2: Strategic Approach & Reason / Insight (4-5 lines)
-    if escalation_reason:
-        p2 = (
-            f"**Recommended Approach & Insights**: Looking deeper into your records, the main factor contributing to this assessment is: "
-            f"*{escalation_reason}*. When approaching this situation, it is important to evaluate how your condition or findings "
-            f"evolve over time rather than treating it in isolation. Maintaining a clear timeline of changes will help you and your "
-            f"specialist make informed decisions."
+    # Q: numbers / values / what should I be worried about
+    if any(k in msg_lower for k in ["number", "value", "worried", "concern", "most", "which"]):
+        if likely_assoc:
+            concern = likely_assoc[0]
+            others = ", ".join(likely_assoc[1:3]) if len(likely_assoc) > 1 else None
+            ans = f"Looking at your report, the value I'd keep an eye on most closely is related to **{concern}**."
+            if others:
+                ans += f" There are also some notes around {others} that are worth watching."
+            ans += f" The overall risk level on your case has been flagged as **{severity}**, so it's not something to panic about, but definitely worth following up with your doctor."
+            return ans
+        return (
+            f"Based on your {dept} records, the findings show a **{severity}** risk level overall. "
+            "I'd recommend sharing these results directly with your doctor so they can walk you through the specific values that need attention."
         )
-    elif likely_assoc:
-        p2 = (
-            f"**Recommended Approach & Insights**: To approach this effectively, keep in mind that the identified pattern ({', '.join(likely_assoc)}) "
-            f"typically requires a balanced, observant approach. You should monitor whether symptoms escalate, remain stable, or resolve, "
-            f"while avoiding unnecessary panic or unverified treatments."
+
+    # Q: what does this mean / explain
+    if any(k in msg_lower for k in ["mean", "explain", "what is", "tell me", "understand", "what does"]):
+        if summary and "assessment completed" not in summary.lower():
+            return (
+                f"So essentially, your {dept} records are showing: **{summary}**. "
+                + (f"This is often associated with {', '.join(likely_assoc)}, " if likely_assoc else "")
+                + "which in plain terms means your body (or document) is flagging something that needs a professional look. "
+                f"The risk level is currently rated **{severity}** — so while it's not an emergency, acting on it sooner rather than later is the right call."
+            )
+        return (
+            f"Your {dept} document has been analyzed and a **{severity}** risk level was identified. "
+            "In simple terms, the findings suggest there are some areas worth discussing with a qualified specialist."
         )
+
+    # Q: what should I do / next steps / precautions
+    if any(k in msg_lower for k in ["do", "step", "action", "precaution", "now", "next", "how", "should i"]):
+        if checklist:
+            steps = "\n".join([f"- {item}" for item in checklist[:4]])
+            return (
+                f"Here's what I'd suggest based on your {dept} records:\n\n{steps}\n\n"
+                "And one more thing — make sure you hold onto all your original documents and reports. "
+                "They'll be important for any follow-up consultations."
+            )
+        return (
+            f"Given the **{severity}** risk profile in your {dept} records, here's what makes sense right now: "
+            "keep yourself well-rested and hydrated, note down any new symptoms or changes you observe, "
+            "and book a follow-up with a specialist if things don't improve. "
+            "Would you like me to set up a reminder for that?"
+        )
+
+    # Q: risk / serious / dangerous / bad
+    if any(k in msg_lower for k in ["risk", "serious", "danger", "bad", "safe", "okay", "fine"]):
+        sev_words = {"low": "relatively mild", "medium": "moderate", "high": "elevated"}
+        sev_desc = sev_words.get(severity, "moderate")
+        if escalation_reason:
+            return (
+                f"The risk level on your case is **{sev_desc}**. The main reason it's flagged this way is: "
+                f"*{escalation_reason}*. That doesn't mean you need to panic — but it does mean getting a professional "
+                "opinion sooner rather than later would be the smart move."
+            )
+        return (
+            f"Your records show a **{sev_desc}** risk level. Overall, it's not critical, but it's not something to ignore either. "
+            "I'd treat this as a signal to schedule a proper check-up."
+        )
+
+    # Generic conversational fallback — still message-aware
+    openers = [
+        f"Good question! Based on what's in your {dept} records,",
+        f"Looking at your {dept} case,",
+        f"From what I can see in your uploaded {dept} documents,",
+        f"Happy to help with that. Your {dept} records show",
+    ]
+    opener = random.choice(openers)
+
+    if summary and "assessment completed" not in summary.lower():
+        body = f" the key finding is: **{summary}**."
     else:
-        p2 = (
-            f"**Recommended Approach & Insights**: In approaching your case, the key is structured observation and careful self-care. "
-            f"Because your records show a **{severity}** risk profile, taking proactive early measures prevents minor issues from escalating "
-            f"into more complex health or security concerns."
-        )
+        body = f" a **{severity}** overall risk level has been identified."
 
-    # Paragraph 3: Actionable Step-by-Step Guidance (4-5 lines)
-    if checklist:
-        steps_str = " ".join([f"({idx+1}) {item}." for idx, item in enumerate(checklist)])
-        p3 = (
-            f"**Actionable Next Steps & Precautions**: Here are the specific, step-by-step actions you should take right now: "
-            f"{steps_str} Additionally, ensure that all original test reports, doctor notes, and receipts are safely preserved for future reference."
-        )
-    else:
-        p3 = (
-            f"**Actionable Next Steps & Precautions**: (1) Stay well hydrated and get adequate physical rest. "
-            f"(2) Keep a daily log of any new or changing symptoms or observations. "
-            f"(3) Consult a certified healthcare professional or specialist for a thorough clinical examination if persistent issues continue."
-        )
+    if likely_assoc:
+        body += f" This appears linked to {', '.join(likely_assoc[:2])}."
 
-    p4 = "Would you like me to set up an automatic email alert or add a follow-up reminder to your Google Calendar for this case?"
+    followup_options = [
+        "Would you like me to walk you through what this means in plain language, or set up a follow-up reminder?",
+        "Let me know if you'd like a step-by-step action plan or want me to set up an email alert for this case.",
+        "Feel free to ask me anything specific — I'm here to help you make sense of it all.",
+    ]
 
-    return f"{p1}\n\n{p2}\n\n{p3}\n\n{p4}"
+    return opener + body + " " + random.choice(followup_options)
 
 
 import re
@@ -255,66 +295,64 @@ async def generate_grounded_chat_response(
     if threat_intel_report:
         threat_prompt_section = f"\n\nLIVE THREAT INTELLIGENCE VERIFICATION RESULTS:\n{threat_intel_report}\n\nIMPORTANT: Include the above Threat Intelligence Report table with risk scores, IPQualityScore, VirusTotal, and WhoisXML details prominently in your response so the user gets complete trust, transparency, and numerical risk scores."
 
+    import time
+    # Uniqueness seed: prevents LLM from caching/repeating the same response
+    _seed = int(time.time()) % 10000
+
     prompt = f"""{PROMPT_INJECTION_PROTECTION}
 
-Task: You are OmniAid Copilot, a warm, highly empathetic, and articulate human specialist assistant.
-Your goal is to answer the user's questions in a natural, compassionate, and human-like voice while grounding your guidance strictly in their uploaded case history, threat verification data, and recent chat conversation history below.
+You are SumScale Copilot — a sharp, warm, conversational AI specialist. You speak like a knowledgeable friend who really gets what the user is going through, NOT like a formal report generator.
 
 ================================================================================
-CRITICAL MULTILINGUAL MANDATE (STRICT COMPLIANCE REQUIRED):
-THE USER HAS SELECTED THE FOLLOWING LANGUAGE FOR THIS CONVERSATION:
----> {lang_name} (Language Code: '{language}') <---
-
-YOU MUST WRITE ALL OUTPUT TEXT ("answer", "suggested_next_questions", AND "auto_generated_title") EXCLUSIVELY IN {lang_name}.
-- DO NOT WRITE IN ENGLISH if language is '{language}' (unless language is 'en').
-- Translate every explanation, summary, guidance, and suggested follow-up question into {lang_name}.
-- Write in natural, fluent, grammatically correct {lang_name} using native script.
+LANGUAGE: Write ALL output exclusively in **{lang_name}** ({language}). No English unless language is 'en'.
 ================================================================================
 
-CRITICAL CONVERSATIONAL MEMORY RULE:
-You have access to the recent conversation history in <conversation_history>. If the user asks about previous messages (e.g., "What did I say earlier?", "Why did you suggest that?"), refer directly to <conversation_history> to give an accurate, context-aware response without losing track of what was said.
+🚨 ANTI-REPEAT RULE (CRITICAL — VIOLATION = FAILURE):
+This is response #{_seed}. Your answer for THIS specific question MUST be UNIQUE and directly address EXACTLY what the user asked.
+NEVER start with "Case Context & Overview", "Recommended Approach", or "Actionable Next Steps".
+NEVER generate a generic overview. ONLY answer what was ACTUALLY asked.
 
-CRITICAL ARTIFACT ANTECEDENT DISAMBIGUATION RULE:
-When the user asks questions referring to "these", "this", "the messages", "the two messages", "these items", or similar without a clear antecedent (e.g., "Are these two messages related to each other?"), YOU MUST ALWAYS INTERPRET IT AS REFERRING TO THE UPLOADED CASE ARTIFACTS / EVIDENCE (e.g. SMS screenshot, email, voice note, PDF), NOT to the AI's prior chat responses. Compare the actual uploaded artifacts directly (e.g., shared scam pattern, shared urgency tactic, shared UPI/contact info, or medical findings) rather than comparing prior chat turns.
+CONVERSATION MEMORY: The user's conversation history is in <conversation_history>. Read it — if they're asking a follow-up, acknowledge what was said before and build on it naturally.
 
-CRITICAL TONE & STYLE INSTRUCTIONS (MUST FOLLOW):
-1. SOUND LIKE A CARING HUMAN SPECIALIST: Speak conversationally, warmly, and naturally as if you are a real expert talking to a patient or user.
-2. NO ROBOTIC AI TEMPLATES: Never use rigid robotic phrasing like "I have analyzed your query based on your case details..." or "Key recommendation:".
-3. NATURAL CONVERSATIONAL PROSE: Express insights in clear, natural paragraphs in {lang_name}.
-4. EMPATHETIC & REASSURING: Provide thoughtful, helpful guidance that feels personal and easy to understand.
-5. GROUNDED IN FACTS: Only use facts from the user case context, threat verification data, and conversation history provided below.{threat_prompt_section}
-6. PROACTIVE REMINDER & ALERT OFFER: Ask the user if they would like to set up constant notifications or reminders for this case (e.g., "Would you like me to set up constant notifications or reminders for this case? You can enable instant free Email Alerts via Gmail, SMS, or add follow-up reminders directly to your Google Calendar with 1 click.").
-7. NO "SOURCES CITED" FOOTERS: Do NOT append any "SOURCES CITED:" section, bullet list of sources, or citation text at the bottom of your response. Keep your answer concise, clean, and direct.
+ARTIFACT RULE: If user says "these", "this", "them" — they mean their UPLOADED DOCUMENTS, not the chat history.
+
+TONE RULES — READ CAREFULLY:
+- Talk like a caring human expert friend. Natural, warm, direct.
+- Match your tone to the question. Worried user → reassuring. Curious → explanatory. Urgent → clear and action-focused.
+- Use "you" and "your" naturally. No corporate-speak.
+- Short paragraphs. No rigid "Paragraph 1 / Paragraph 2" structure.
+- End with ONE natural follow-up offer, not a robotic reminder prompt.{threat_prompt_section}
+- NEVER use "SOURCES CITED" footer.
 
 <user_data>
-USER CASE HISTORY CONTEXT:
+CASE HISTORY:
 {cases_context_json}
 
-RECENT CONVERSATION HISTORY IN THIS SESSION:
+CONVERSATION SO FAR:
 <conversation_history>
 {history_str}
 </conversation_history>
 
-CURRENT USER QUESTION / VOICE QUERY (IN ANY LANGUAGE):
+USER'S CURRENT MESSAGE (answer THIS specifically):
 {user_message}
 </user_data>
 
-Return ONLY a valid JSON object matching this schema:
+Return ONLY valid JSON:
 {{
-    "answer": "Your warm, natural, human-like response answering the user directly in {lang_name}.",
+    "answer": "Direct, warm, conversational answer to EXACTLY what the user asked. In {lang_name}. NOT a generic overview.",
     "cited_cases": [
         {{
-            "case_id": "demo_case_health_escalated",
-            "department": "health",
-            "summary": "Short summary"
+            "case_id": "case_id_here",
+            "department": "department_here",
+            "summary": "Brief relevant summary"
         }}
     ],
     "suggested_next_questions": [
-        "What step-by-step precautions should I take?",
-        "Set up email & Google Calendar reminders for this case",
-        "Explain key terms simply"
+        "A follow-up question specific to THIS conversation",
+        "Another relevant follow-up",
+        "One more contextual question"
     ],
-    "auto_generated_title": "A short, clear 3 to 6 word title in {lang_name}"
+    "auto_generated_title": "3-6 word title capturing THIS specific question in {lang_name}"
 }}
 """
 
@@ -322,7 +360,7 @@ Return ONLY a valid JSON object matching this schema:
 
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
-            raw = call_text_llm(prompt, temperature=0.4)
+            raw = call_text_llm(prompt, temperature=0.75)
             result = clean_json_response(raw)
             answer_val = result.get("answer")
             if not answer_val or not str(answer_val).strip():
