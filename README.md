@@ -169,5 +169,13 @@ npm run dev
 
 ---
 
+## 🗺️ Future Insights & Planned Features
+
+### Planned Features
+
+- **Trust Circle** — Users will be able to add trusted contacts (friends/family) and, with one click, share an AI-generated risk alert summary directly from a case's chat conversation — e.g. instantly warning a family member about a detected fraud attempt or health risk flagged in their own case. Alerts will be scoped to only the specific AI response shared, never raw uploaded evidence, keeping the same per-user/per-case data isolation already enforced elsewhere in the app.
+
+---
+
 ## 📄 License
 This project is created for hackathon demonstration. All rights reserved by **Team SumScale**.
