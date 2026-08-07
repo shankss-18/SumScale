@@ -41,7 +41,7 @@ const Login = () => {
     } catch {
       // Fallback
     } finally {
-      navigate('/dashboard');
+      navigate('/');
     }
   };
 
@@ -55,11 +55,13 @@ const Login = () => {
     setSendingOtp(true);
     try {
       await apiSendOTP(identifier.trim(), 'login');
-    } catch {
-      // Non-blocking catch
-    } finally {
       setOtpSent(true);
       setTimer(60);
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message || 'No account found with this email address. Please register first.';
+      setLocalError(errorMsg);
+      setOtpSent(false);
+    } finally {
       setSendingOtp(false);
     }
   };
@@ -131,8 +133,15 @@ const Login = () => {
               </div>
 
               {localError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium text-center">
-                  {localError}
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium text-center space-y-1.5">
+                  <div>{localError}</div>
+                  {localError.toLowerCase().includes('register') || localError.toLowerCase().includes('no account') ? (
+                    <div>
+                      <Link to={`/signup?identifier=${encodeURIComponent(identifier.trim())}`} className="inline-block font-bold text-[#006D77] bg-white px-3 py-1 rounded-full border border-[#83C5BE]/50 hover:bg-[#EDF6F9] transition-all shadow-2xs">
+                        👉 Create your Account here
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               )}
 

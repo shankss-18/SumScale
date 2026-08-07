@@ -18,6 +18,7 @@ class UserInDB(BaseModel):
 
     id: str = Field(alias="_id", description="MongoDB ObjectId as string")
     email: EmailStr
+    full_name: Optional[str] = Field(default=None, description="User full name")
     phone_number: Optional[str] = Field(default=None, description="Optional phone number")
     hashed_password: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -33,8 +34,10 @@ class UserResponse(BaseModel):
 
     id: str
     email: EmailStr
+    full_name: Optional[str] = None
     phone_number: Optional[str] = None
     created_at: datetime
     emergency_contact_phone: Optional[str] = None
     alert_consent: bool = False
+
 

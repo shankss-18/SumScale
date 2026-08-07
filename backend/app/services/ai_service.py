@@ -69,7 +69,7 @@ def get_groq_client():
 # Groq model to use — llama-3.3-70b-versatile has best quality on free tier
 GROQ_MODEL = "llama-3.3-70b-versatile"
 # Fallback Gemini model for text (when Groq is not configured)
-GEMINI_TEXT_MODEL = "gemini-2.5-flash"
+GEMINI_TEXT_MODEL = "gemini-1.5-flash"
 
 
 def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:

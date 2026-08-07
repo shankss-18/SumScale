@@ -61,6 +61,7 @@ frontend/.vite/
 # --- OS & editor ---
 .DS_Store
 Thumbs.db
+*.lnk
 .idea/
 .vscode/
 *.swp

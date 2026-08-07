@@ -58,9 +58,11 @@ async def register(request: Request, body: RegisterRequest):
         )
 
     hashed_pwd = hash_password(body.password)
+    full_name_clean = body.full_name.strip() if body.full_name and body.full_name.strip() else None
 
     new_user_doc = {
         "email": email_clean,
+        "full_name": full_name_clean,
         "phone_number": None,
         "hashed_password": hashed_pwd,
         "created_at": datetime.now(timezone.utc),
@@ -72,6 +74,7 @@ async def register(request: Request, body: RegisterRequest):
     return UserResponse(
         id=user_id,
         email=email_clean,
+        full_name=full_name_clean,
         created_at=new_user_doc["created_at"],
     )
 
@@ -153,7 +156,10 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
+        full_name=current_user.full_name,
         created_at=current_user.created_at,
+        emergency_contact_phone=current_user.emergency_contact_phone,
+        alert_consent=current_user.alert_consent,
     )
 
 
@@ -169,10 +175,28 @@ async def send_otp_endpoint(request: Request, body: SendOTPRequest):
 
     try:
         clean_email = body.get_email()
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Please enter a valid email address.")
 
-    result = await send_otp_identifier(db=db, email=clean_email, purpose=body.purpose or "login")
+    purpose = (body.purpose or "login").lower().strip()
+
+    # Check user existence in DB for login / signup rules
+    user_doc = await db.users.find_one({"email": clean_email})
+
+    if purpose == "login":
+        if not user_doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No account found with this email address. Please register first.",
+            )
+    elif purpose == "signup":
+        if user_doc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email address already exists. Please sign in instead.",
+            )
+
+    result = await send_otp_identifier(db=db, email=clean_email, purpose=purpose)
     result["real_sent"] = True
     return OTPResponse(**result)
 
@@ -197,6 +221,7 @@ async def verify_otp_endpoint(request: Request, body: VerifyOTPRequest):
         raise HTTPException(status_code=400, detail=msg_or_email)
 
     verified_email = msg_or_email
+    full_name_clean = body.full_name.strip() if body.full_name and body.full_name.strip() else None
 
     # Check if user exists by email
     user_doc = await db.users.find_one({"email": verified_email})
@@ -204,6 +229,7 @@ async def verify_otp_endpoint(request: Request, body: VerifyOTPRequest):
     if not user_doc:
         new_user = {
             "email": verified_email,
+            "full_name": full_name_clean,
             "phone_number": None,
             "hashed_password": hash_password(f"OTP_AUTH_{verified_email}"),
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -213,6 +239,11 @@ async def verify_otp_endpoint(request: Request, body: VerifyOTPRequest):
         user_id = str(res.inserted_id)
     else:
         user_id = str(user_doc["_id"])
+        if full_name_clean:
+            await db.users.update_one(
+                {"_id": user_doc["_id"]},
+                {"$set": {"full_name": full_name_clean}}
+            )
 
     access_token = create_access_token(user_id=user_id)
     refresh_token = create_refresh_token(user_id=user_id)

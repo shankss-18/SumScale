@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
+import WelcomeModal from '../components/WelcomeModal';
 import { apiCreateCase, apiUploadCaseFile, apiAnalyzeCase } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 const MAX_FILES_PER_CASE = 5;
@@ -10,11 +12,36 @@ const MAX_TEXT_LENGTH = 5000;
 
 const NewCase = () => {
   const { t, i18n } = useTranslation();
+  const { user, loading: authLoading } = useAuth();
   const [description, setDescription] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  const isDemoUser = user?.email === 'demo@omniaid.ai' || user?.email?.includes('demo');
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (isDemoUser) {
+      const dismissed = sessionStorage.getItem('sumscale_demo_upload_dismissed');
+      if (!dismissed) {
+        setShowWelcome(true);
+      }
+      const handleUnload = () => {
+        sessionStorage.removeItem('sumscale_demo_upload_dismissed');
+      };
+      window.addEventListener('beforeunload', handleUnload);
+      return () => window.removeEventListener('beforeunload', handleUnload);
+    } else {
+      const seen = localStorage.getItem('sumscale_upload_guide_seen');
+      if (!seen) {
+        setShowWelcome(true);
+      }
+    }
+  }, [authLoading, user, isDemoUser]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -177,7 +204,18 @@ const NewCase = () => {
           <div style={{ position:'absolute', width:'220px', height:'200px', top:'-40px', right:'-60px', borderRadius:'60% 40% 55% 45%/50% 60% 40% 50%', background:'rgba(131,197,190,0.18)', pointerEvents:'none', filter:'blur(2px)' }} />
           <div style={{ position:'absolute', width:'120px', height:'110px', bottom:'-20px', left:'-40px', borderRadius:'45% 55% 40% 60%/55% 45% 60% 40%', background:'rgba(0,109,119,0.08)', pointerEvents:'none' }} />
 
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[#83C5BE] mb-2">Upload Document</p>
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#83C5BE]">Upload Document</p>
+            <button
+              type="button"
+              onClick={() => setShowWelcome(true)}
+              className="inline-flex items-center space-x-1.5 bg-[#EDF6F9] border border-[#83C5BE]/50 text-[#006D77] hover:bg-[#83C5BE]/20 font-bold text-xs rounded-full px-3.5 py-1.5 transition-all shadow-xs cursor-pointer"
+              title="View Platform Guide"
+            >
+              <span>💡</span>
+              <span>{t('nav.platformGuide', 'Platform Guide')}</span>
+            </button>
+          </div>
           <h1 className="text-3xl sm:text-4xl font-normal font-serif text-[#006D77] leading-tight mb-3">
             {t('newCase.title')}
           </h1>
@@ -337,6 +375,10 @@ const NewCase = () => {
 
 
         </div>{/* end white container */}
+
+        {/* Upload Guide Modal Popup */}
+        <WelcomeModal isOpen={showWelcome} onClose={() => setShowWelcome(false)} type="upload" />
+
       </main>
     </div>
   );

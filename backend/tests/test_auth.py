@@ -194,11 +194,11 @@ async def test_login_rate_limiting(client):
 
 
 @pytest.mark.asyncio
-async def test_send_and_verify_email_otp_success(client):
-    """Test sending 6-digit email OTP and verifying it to issue JWT token."""
+async def test_send_and_verify_email_otp_signup_success(client):
+    """Test sending 6-digit email OTP for signup with full_name and verifying it."""
     send_res = await client.post(
         "/auth/send-otp",
-        json={"email": "otpuser@example.com", "purpose": "login"},
+        json={"email": "otpuser@example.com", "purpose": "signup"},
     )
     assert send_res.status_code == 200
     body = send_res.json()
@@ -210,11 +210,46 @@ async def test_send_and_verify_email_otp_success(client):
 
     verify_res = await client.post(
         "/auth/verify-otp",
-        json={"email": "otpuser@example.com", "otp_code": dev_otp},
+        json={"email": "otpuser@example.com", "otp_code": dev_otp, "full_name": "Alex Morgan"},
     )
     assert verify_res.status_code == 200
     v_body = verify_res.json()
     assert "access_token" in v_body
     assert "refresh_token" in v_body
+
+    me_res = await client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {v_body['access_token']}"},
+    )
+    assert me_res.status_code == 200
+    assert me_res.json()["full_name"] == "Alex Morgan"
+
+
+@pytest.mark.asyncio
+async def test_send_otp_login_nonexistent_email_returns_404(client):
+    """Sending OTP for login with non-existent email returns 404 and notification message."""
+    send_res = await client.post(
+        "/auth/send-otp",
+        json={"email": "unregistered@example.com", "purpose": "login"},
+    )
+    assert send_res.status_code == 404
+    assert "Please register first" in send_res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_send_otp_signup_existing_email_returns_400(client):
+    """Sending OTP for signup with an existing email returns 400."""
+    await client.post(
+        "/auth/register",
+        json={"email": "alreadyhere@example.com", "password": "password123"},
+    )
+
+    send_res = await client.post(
+        "/auth/send-otp",
+        json={"email": "alreadyhere@example.com", "purpose": "signup"},
+    )
+    assert send_res.status_code == 400
+    assert "already exists" in send_res.json()["detail"]
+
 
 

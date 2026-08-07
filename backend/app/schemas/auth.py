@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr, Field
 class UserResponse(BaseModel):
     id: str
     email: str
+    full_name: Optional[str] = None
     phone_number: Optional[str] = None
     created_at: str
 
@@ -59,6 +60,7 @@ class OTPResponse(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
+    full_name: Optional[str] = Field(default=None, max_length=100)
     password: str = Field(
         min_length=8,
         max_length=128,

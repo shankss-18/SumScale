@@ -156,6 +156,75 @@ const LandingPage = () => {
         .stat-val-d3 { animation-delay: 0.34s; }
         .stat-val-d4 { animation-delay: 0.46s; }
 
+        /* ── Subtle Micro 3D Sticker Animations ── */
+        @keyframes mic-wave-float-3d {
+          0%, 100% { transform: translateY(0px) rotateX(2deg) scale(1); }
+          50% { transform: translateY(-4px) rotateX(-3deg) scale(1.03); }
+        }
+        @keyframes sound-bar-bounce {
+          0%, 100% { transform: scaleY(0.4); }
+          50% { transform: scaleY(1.1); }
+        }
+
+        @keyframes chat-flip-3d {
+          0%, 100% { transform: translateY(0px) rotateY(0deg) scale(1); }
+          50% { transform: translateY(-4px) rotateY(8deg) scale(1.03); }
+        }
+        @keyframes dot-blink {
+          0%, 100% { opacity: 0.4; transform: scale(0.9); }
+          50% { opacity: 1; transform: scale(1.25); }
+        }
+
+        @keyframes shield-flex-3d {
+          0%, 100% { transform: translateY(0px) rotateX(0deg) scale(1); }
+          50% { transform: translateY(-4px) rotateX(-5deg) scale(1.03); }
+        }
+        @keyframes check-pulse {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 1; filter: drop-shadow(0 0 4px rgba(0,109,119,0.5)); }
+        }
+
+        @keyframes zap-speed-3d {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-4px) scale(1.05); }
+        }
+        @keyframes zap-flash {
+          0%, 100% { opacity: 0.85; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(131,197,190,0.8)); }
+        }
+
+        .sticker-3d-wrapper {
+          perspective: 600px;
+          transform-style: preserve-3d;
+        }
+
+        .sticker-3d-icon {
+          transition: transform 0.3s ease-out, filter 0.3s ease;
+          transform-style: preserve-3d;
+        }
+
+        .sticker-3d-voice { animation: mic-wave-float-3d 5s ease-in-out infinite; }
+        .bar-anim-1 { transform-origin: bottom; animation: sound-bar-bounce 1.2s ease-in-out infinite 0s; }
+        .bar-anim-2 { transform-origin: bottom; animation: sound-bar-bounce 1.2s ease-in-out infinite 0.3s; }
+        .bar-anim-3 { transform-origin: bottom; animation: sound-bar-bounce 1.2s ease-in-out infinite 0.6s; }
+
+        .sticker-3d-chat { animation: chat-flip-3d 5.5s ease-in-out infinite; }
+        .chat-dot-1 { animation: dot-blink 1.5s ease-in-out infinite 0s; transform-origin: center; }
+        .chat-dot-2 { animation: dot-blink 1.5s ease-in-out infinite 0.3s; transform-origin: center; }
+        .chat-dot-3 { animation: dot-blink 1.5s ease-in-out infinite 0.6s; transform-origin: center; }
+
+        .sticker-3d-shield { animation: shield-flex-3d 6s ease-in-out infinite; }
+        .shield-check { animation: check-pulse 2.2s ease-in-out infinite; }
+
+        .sticker-3d-response { animation: zap-speed-3d 4.8s ease-in-out infinite; }
+        .zap-bolt { transform-origin: center; animation: zap-flash 1.8s ease-in-out infinite; }
+
+        .group:hover .sticker-3d-icon {
+          animation-play-state: paused;
+          transform: scale(1.08) translateY(-2px);
+          filter: drop-shadow(0 6px 12px rgba(0, 109, 119, 0.2));
+        }
+
         /* ── Ping ring for brand icon ── */
         @keyframes hero-ping {
           0%   { transform: scale(1);   opacity: 0.6; }
@@ -462,27 +531,151 @@ const LandingPage = () => {
 
         </div>
 
-        {/* ── Impact metrics banner ── */}
-        <div data-reveal data-reveal-delay="0.1"
-             className="rounded-3xl
-                        bg-gradient-to-r from-[#003840] via-[#006D77] to-[#005A63]
-                        text-white p-8 sm:p-10 shadow-xl
-                        grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {[
-            { val: '90%',  key: 'home.stat1', fb: 'Faster Case Analysis',  d: 'stat-val-d1' },
-            { val: '5+',   key: 'home.stat2', fb: 'Indian Vernaculars',     d: 'stat-val-d2' },
-            { val: '100%', key: 'home.stat3', fb: 'OTP Verified Access',    d: 'stat-val-d3' },
-            { val: '< 3s', key: 'home.stat4', fb: 'Real-Time AI Response',  d: 'stat-val-d4' },
-          ].map(({ val, key, fb, d }) => (
-            <div key={key} className="space-y-1">
-              <p className={`text-3xl sm:text-4xl font-extrabold text-[#83C5BE] stat-val ${d}`}>
-                {val}
-              </p>
-              <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
-                {t(key, fb)}
-              </p>
+        {/* ── Platform Scale & Impact Section ── */}
+        <div data-reveal data-reveal-delay="0.1" className="space-y-6 pt-12 border-t border-[#83C5BE]/20 mt-12">
+          {/* Enhanced Section Header with i18n */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#EDF6F9] border border-[#83C5BE]/40 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-[#006D77] animate-pulse" />
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#006D77]">
+                  {t('home.scaleBadge', 'Platform Scale & Performance')}
+                </span>
+              </div>
+              <h3 className="text-3xl sm:text-4xl font-normal font-serif text-[#006D77] tracking-tight">
+                {t('home.scaleTitle', 'Real-World Multimodal Scale')}
+              </h3>
             </div>
-          ))}
+            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xs leading-relaxed">
+              {t('home.scaleDesc', 'Proven high-speed document extraction, regional speech processing, and zero-trust authentication.')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                val: '90%',
+                d: 'stat-val-d1',
+                prefixKey: 'home.stat1Prefix',
+                boldKey: 'home.stat1Bold',
+                fbPrefix: 'Faster Case Analysis supported through',
+                fbBold: 'multimodal AI.',
+                animClass: 'sticker-3d-voice',
+                cardTheme: 'bg-white border-[#83C5BE]/40 text-slate-800',
+                glowTheme: 'rgba(131,197,190,0.22)',
+                stickerTheme: 'bg-gradient-to-tr from-[#EDF6F9] via-white to-[#83C5BE]/30 border-[#83C5BE]/40',
+                valTheme: 'text-[#006D77] group-hover:text-[#003840]',
+                subTheme: 'text-slate-600',
+                boldTheme: 'text-[#006D77]',
+                icon: (
+                  <svg className="w-10 h-10 text-[#006D77]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeWidth="1.5" d="M3 17h18" stroke="#83C5BE" opacity="0.6" />
+                    <rect className="bar-anim-1" x="5" y="8" width="2.2" height="9" rx="1.1" fill="#006D77" />
+                    <rect className="bar-anim-2" x="9.5" y="4" width="2.2" height="13" rx="1.1" fill="#006D77" />
+                    <rect className="bar-anim-3" x="14" y="9" width="2.2" height="8" rx="1.1" fill="#006D77" />
+                    <rect className="bar-anim-1" x="18.5" y="11" width="2.2" height="6" rx="1.1" fill="#006D77" />
+                    <path d="M12 1.5c0 1.2-1.2 2.2-2.5 2.2 1.3 0 2.5 1 2.5 2.2 0-1.2 1.2-2.2 2.5-2.2-1.3 0-2.5-1-2.5-2.2z" fill="#006D77" />
+                  </svg>
+                )
+              },
+              {
+                val: '5+',
+                d: 'stat-val-d2',
+                prefixKey: 'home.stat2Prefix',
+                boldKey: 'home.stat2Bold',
+                fbPrefix: 'Indian & Vernacular languages for',
+                fbBold: 'speech & text.',
+                animClass: 'sticker-3d-chat',
+                cardTheme: 'bg-[#006D77] border-[#006D77] text-white shadow-xl',
+                glowTheme: 'rgba(255,255,255,0.12)',
+                stickerTheme: 'bg-white/15 border-white/25 text-white',
+                valTheme: 'text-[#83C5BE] group-hover:text-white',
+                subTheme: 'text-slate-100/90',
+                boldTheme: 'text-white font-extrabold',
+                icon: (
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <circle className="chat-dot-1" cx="8" cy="12" r="1.2" fill="#83C5BE" />
+                    <circle className="chat-dot-2" cx="12" cy="12" r="1.2" fill="#83C5BE" />
+                    <circle className="chat-dot-3" cx="16" cy="12" r="1.2" fill="#83C5BE" />
+                  </svg>
+                )
+              },
+              {
+                val: '100%',
+                d: 'stat-val-d3',
+                prefixKey: 'home.stat3Prefix',
+                boldKey: 'home.stat3Bold',
+                fbPrefix: 'OTP Verified access for',
+                fbBold: 'mobile & email.',
+                animClass: 'sticker-3d-shield',
+                cardTheme: 'bg-white border-[#83C5BE]/40 text-slate-800',
+                glowTheme: 'rgba(131,197,190,0.22)',
+                stickerTheme: 'bg-gradient-to-tr from-[#EDF6F9] via-white to-[#83C5BE]/30 border-[#83C5BE]/40',
+                valTheme: 'text-[#006D77] group-hover:text-[#003840]',
+                subTheme: 'text-slate-600',
+                boldTheme: 'text-[#006D77]',
+                icon: (
+                  <svg className="w-10 h-10 text-[#006D77]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" className="shield-check" />
+                    <path d="M12 4.5v15" stroke="#83C5BE" strokeWidth="0.8" strokeDasharray="2 2" />
+                  </svg>
+                )
+              },
+              {
+                val: '< 3s',
+                d: 'stat-val-d4',
+                prefixKey: 'home.stat4Prefix',
+                boldKey: 'home.stat4Bold',
+                fbPrefix: 'Real-time AI responses supported',
+                fbBold: 'globally.',
+                animClass: 'sticker-3d-response',
+                cardTheme: 'bg-[#006D77] border-[#006D77] text-white shadow-xl',
+                glowTheme: 'rgba(255,255,255,0.12)',
+                stickerTheme: 'bg-white/15 border-white/25 text-white',
+                valTheme: 'text-[#83C5BE] group-hover:text-white',
+                subTheme: 'text-slate-100/90',
+                boldTheme: 'text-white font-extrabold',
+                icon: (
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke="#83C5BE" strokeWidth="1.5" strokeDasharray="16 6" opacity="0.6" />
+                    <path className="zap-bolt" fill="#83C5BE" stroke="#83C5BE" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" d="M13 2.5L5.5 13H12L11 21.5L18.5 11H12L13 2.5Z" />
+                  </svg>
+                )
+              },
+            ].map(({ val, d, prefixKey, boldKey, fbPrefix, fbBold, animClass, cardTheme, glowTheme, stickerTheme, valTheme, subTheme, boldTheme, icon }, idx) => (
+              <div
+                key={idx}
+                data-reveal
+                data-reveal-delay={(0.08 * (idx + 1)).toString()}
+                className={`cap-card ${cardTheme} p-7 sm:p-8 flex flex-col items-center justify-between text-center min-h-[260px] group relative overflow-hidden shadow-md transition-all duration-300 cursor-pointer`}
+                style={{ borderRadius: idx % 2 === 0 ? '2.5rem 1.5rem 2.5rem 1.5rem' : '1.5rem 2.5rem 1.5rem 2.5rem' }}
+              >
+                {/* Ambient Soft Glow Sphere */}
+                <div
+                  className="absolute -top-6 -right-6 w-32 h-32 rounded-full pointer-events-none transition-transform duration-300 group-hover:scale-125"
+                  style={{ background: glowTheme }}
+                />
+
+                {/* Unique 3D Animated Sticker Icon Container */}
+                <div className="sticker-3d-wrapper relative z-10 my-1">
+                  <div className={`sticker-3d-icon ${animClass} w-16 h-16 rounded-2xl ${stickerTheme} flex items-center justify-center shadow-md`}>
+                    {icon}
+                  </div>
+                </div>
+
+                {/* Main Statistic Number with Pulse Pop */}
+                <p className={`text-4xl sm:text-5xl font-black tracking-tight stat-val ${d} ${valTheme} my-2 relative z-10 transition-colors`}>
+                  {val}
+                </p>
+
+                {/* Subtext with bold keyword (translated via i18n) */}
+                <p className={`text-xs font-medium leading-relaxed max-w-[200px] relative z-10 ${subTheme}`}>
+                  {t(prefixKey, fbPrefix)} <span className={`font-bold transition-colors ${boldTheme}`}>{t(boldKey, fbBold)}</span>
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
       </section>

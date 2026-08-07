@@ -11,6 +11,7 @@ const Signup = () => {
   const initialId = queryParams.get('identifier') || '';
 
   // Pure OTP Mode States
+  const [fullName, setFullName] = useState('');
   const [identifier, setIdentifier] = useState(initialId);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -35,18 +36,24 @@ const Signup = () => {
   const handleSendOTP = async (e) => {
     e?.preventDefault();
     setLocalError('');
+    if (!fullName.trim()) {
+      setLocalError('Full name is required. Please enter your name.');
+      return;
+    }
     if (!identifier.trim() || !identifier.includes('@')) {
-      setLocalError('Please enter a valid email address.');
+      setLocalError('Email address is required. Please enter a valid email.');
       return;
     }
     setSendingOtp(true);
     try {
       await apiSendOTP(identifier.trim(), 'signup');
-    } catch (err) {
-      // Non-blocking catch for smooth user flow
-    } finally {
       setOtpSent(true);
       setTimer(60);
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || 'Failed to send OTP verification code.';
+      setLocalError(msg);
+      setOtpSent(false);
+    } finally {
       setSendingOtp(false);
     }
   };
@@ -59,7 +66,7 @@ const Signup = () => {
       return;
     }
     try {
-      await loginWithOTP(identifier.trim(), otpCode.trim());
+      await loginWithOTP(identifier.trim(), otpCode.trim(), fullName.trim());
       navigate('/dashboard');
     } catch (err) {
       setLocalError(err.message || 'OTP verification failed. Please check your code and try again.');
@@ -118,8 +125,15 @@ const Signup = () => {
               </div>
 
               {localError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium text-center">
-                  {localError}
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium text-center space-y-1.5">
+                  <div>{localError}</div>
+                  {localError.toLowerCase().includes('already exists') || localError.toLowerCase().includes('sign in') ? (
+                    <div>
+                      <Link to={`/login?identifier=${encodeURIComponent(identifier.trim())}`} className="inline-block font-bold text-[#006D77] bg-white px-3 py-1 rounded-full border border-[#83C5BE]/50 hover:bg-[#EDF6F9] transition-all shadow-2xs">
+                        👉 Sign In to your Account
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -127,8 +141,24 @@ const Signup = () => {
               {!otpSent ? (
                 <form onSubmit={handleSendOTP} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Email Address
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Your Name</span>
+                      <span className="text-[10px] text-rose-500 font-bold">* Mandatory</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Alex Morgan"
+                      className="w-full px-4 py-3 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-[#006D77] focus:ring-2 focus:ring-[#006D77]/20 transition-all font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Email Address</span>
+                      <span className="text-[10px] text-rose-500 font-bold">* Mandatory</span>
                     </label>
                     <input
                       type="email"
@@ -143,7 +173,7 @@ const Signup = () => {
                   <button
                     type="submit"
                     disabled={sendingOtp}
-                    className="w-full py-3.5 px-6 rounded-full bg-slate-900 hover:bg-[#006D77] text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-95"
+                    className="w-full py-3.5 px-6 rounded-full bg-slate-900 hover:bg-[#006D77] text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-95 cursor-pointer"
                   >
                     {sendingOtp ? (
                       <span>Sending OTP Verification Code...</span>

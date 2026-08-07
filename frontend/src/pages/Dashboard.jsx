@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Navbar';
+import WelcomeModal from '../components/WelcomeModal';
 import { apiListCases, apiUpdateCaseCategory } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -160,15 +161,75 @@ const ProgressBar = ({ label, count, total, color, delay }) => {
   );
 };
 
+/* ─── Claude-Style Dynamic Greeting Generator ─── */
+const getClaudeGreeting = (user) => {
+  const rawName = user?.full_name?.trim() || user?.name?.trim() || (user?.email ? user.email.split('@')[0] : '');
+  const firstName = rawName ? rawName.split(' ')[0] : '';
+  const formattedName = firstName ? (firstName.charAt(0).toUpperCase() + firstName.slice(1)) : 'there';
+
+  const hour = new Date().getHours();
+
+  let salutation = '';
+  if (hour >= 5 && hour < 12) {
+    salutation = `Good morning, ${formattedName}`;
+  } else if (hour >= 12 && hour < 17) {
+    salutation = `Good afternoon, ${formattedName}`;
+  } else if (hour >= 17 && hour < 22) {
+    salutation = `Good evening, ${formattedName}`;
+  } else {
+    salutation = `Working late, ${formattedName}?`;
+  }
+
+  const subtexts = [
+    "What would you like to analyze or explore today?",
+    "How can SumScale help you synthesize your documents today?",
+    "Ready to extract key intelligence and grounded answers?",
+    "Your multimodal document workspace is ready for your questions."
+  ];
+
+  const subtextIndex = (new Date().getMinutes() + hour) % subtexts.length;
+
+  return {
+    salutation,
+    subtext: subtexts[subtextIndex],
+  };
+};
+
 /* ─── Dashboard ─── */
 const Dashboard = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const isDemoUser = user?.email === 'demo@omniaid.ai' || user?.email?.includes('demo');
+
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [savedChats, setSavedChats] = useState([]);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  const { salutation, subtext } = getClaudeGreeting(user);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (isDemoUser) {
+      const dismissed = sessionStorage.getItem('sumscale_demo_dashboard_dismissed');
+      if (!dismissed) {
+        setShowWelcome(true);
+      }
+      const handleUnload = () => {
+        sessionStorage.removeItem('sumscale_demo_dashboard_dismissed');
+      };
+      window.addEventListener('beforeunload', handleUnload);
+      return () => window.removeEventListener('beforeunload', handleUnload);
+    } else {
+      const seen = localStorage.getItem('sumscale_dashboard_guide_seen');
+      if (!seen) {
+        setShowWelcome(true);
+      }
+    }
+  }, [authLoading, user, isDemoUser]);
 
   const handleMarkCategory = async (e, caseId, newStatus, newSeverity) => {
     e.preventDefault();
@@ -312,18 +373,33 @@ const Dashboard = () => {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        {/* ── Top Action Bar ── */}
-        <div className="flex items-center justify-between gap-4">
+        {/* ── Dynamic Claude-Style Greeting Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-normal font-serif text-[#006D77]">{t('dashboard.title')}</h1>
-            <p className="text-xs text-slate-500 mt-0.5">{t('dashboard.subtitle')}</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-serif text-[#006D77] tracking-tight flex items-center gap-2.5">
+              <span>{salutation}</span>
+              <span className="inline-block animate-bounce">👋</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+              {subtext}
+            </p>
           </div>
-          <Link
-            to="/new-case"
-            className="inline-flex items-center space-x-2 bg-[#006D77] hover:bg-[#005a63] text-white font-bold text-xs rounded-full px-6 py-3 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 shrink-0"
-          >
-            <span>{t('dashboard.uploadDocsBtn')}</span>
-          </Link>
+          <div className="flex items-center space-x-3 shrink-0">
+            <button
+              onClick={() => setShowWelcome(true)}
+              className="inline-flex items-center space-x-1.5 bg-white border border-[#83C5BE]/60 text-[#006D77] hover:bg-[#EDF6F9] font-bold text-xs rounded-full px-4 py-2.5 transition-all duration-300 shadow-xs hover:shadow-md cursor-pointer"
+              title="View Platform Guide"
+            >
+              <span>💡</span>
+              <span className="hidden sm:inline">{t('nav.platformGuide', 'Platform Guide')}</span>
+            </button>
+            <Link
+              to="/new-case"
+              className="inline-flex items-center space-x-2 bg-[#006D77] hover:bg-[#005a63] text-white font-bold text-xs rounded-full px-6 py-3 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 shrink-0"
+            >
+              <span>{t('dashboard.uploadDocsBtn')}</span>
+            </Link>
+          </div>
         </div>
 
         {/* ── Analytics Row: Tracker + Pie Chart ── */}
@@ -578,6 +654,8 @@ const Dashboard = () => {
           )}
         </div>
 
+        {/* Dashboard Guide Modal Popup */}
+        <WelcomeModal isOpen={showWelcome} onClose={() => setShowWelcome(false)} type="dashboard" />
 
       </main>
     </div>

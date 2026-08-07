@@ -123,20 +123,23 @@ const Navbar = () => {
                 className="bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-800 rounded-full px-3.5 py-1.5 text-xs font-bold flex items-center space-x-2 cursor-pointer transition-all shadow-2xs"
               >
                 <div className="w-5 h-5 rounded-full bg-[#006D77] text-white text-[10px] font-extrabold flex items-center justify-center">
-                  {user.email?.[0]?.toUpperCase() || 'U'}
+                  {(user.full_name?.[0] || user.email?.[0] || 'U').toUpperCase()}
                 </div>
-                <span className="max-w-[110px] truncate font-semibold">
-                  {user.email}
+                <span className="max-w-[120px] truncate font-semibold">
+                  {user.full_name || user.email}
                 </span>
                 <span className="text-[10px] text-slate-500">▾</span>
               </button>
 
               {/* Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200/90 rounded-2xl shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Account</p>
-                    <p className="text-xs font-bold text-slate-900 truncate mt-0.5">{user.email}</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Account Profile</p>
+                    {user.full_name && (
+                      <p className="text-xs font-extrabold text-[#006D77] truncate mt-0.5">{user.full_name}</p>
+                    )}
+                    <p className="text-[11px] font-medium text-slate-500 truncate mt-0.5">{user.email}</p>
                   </div>
 
                   <div className="py-1">

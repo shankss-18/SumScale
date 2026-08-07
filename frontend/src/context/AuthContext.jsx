@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       // Fallback for demo account or any error state so demo access is 100% reliable
       if (email === 'demo@omniaid.ai' || email?.includes('demo') || err.message?.includes('Network') || !err.response || err.response?.status === 401) {
-        const dummyUser = { id: 'demo_user_123', email: email || 'demo@omniaid.ai', created_at: new Date().toISOString() };
+        const dummyUser = { id: 'demo_user_123', email: email || 'demo@omniaid.ai', full_name: 'Demo User', created_at: new Date().toISOString() };
         setUser(dummyUser);
         localStorage.setItem('access_token', 'demo_token_123');
         setAccessToken('demo_token_123');
