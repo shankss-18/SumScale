@@ -334,7 +334,8 @@ async def generate_grounded_chat_response(
     threat_intel_report = await _check_fraud_in_chat(user_message, user_cases, db)
 
     formatted_cases = []
-    for c in user_cases:
+    # Cap at top 3 cases to keep prompt token footprint lean and prevent rate limits
+    for c in user_cases[:3]:
         case_id = str(c.get("_id") or c.get("id"))
         dept = c.get("department")
         findings = c.get("findings", {})
@@ -347,16 +348,15 @@ async def generate_grounded_chat_response(
             or ""
         )
 
-        # Include raw extracted text from all evidence items so the LLM can cite
-        # actual lab values, prescription details, appointment info, etc.
+        # Include raw extracted text from evidence items capped at 800 chars
         evidence_details = []
-        for idx, ev in enumerate(c.get("evidence", []), 1):
+        for idx, ev in enumerate(c.get("evidence", [])[:3], 1):
             extracted = (ev.get("extracted_text") or "").strip()
             if extracted and "content extraction failed" not in extracted.lower():
                 ev_type = ev.get("type") or ev.get("artifact_type") or f"document_{idx}"
                 evidence_details.append({
                     "document_type": ev_type,
-                    "content": extracted[:2000],  # cap at 2000 chars per doc to stay within token budget
+                    "content": extracted[:800],  # cap at 800 chars per doc to preserve daily quota
                 })
 
         formatted_cases.append({
@@ -366,7 +366,7 @@ async def generate_grounded_chat_response(
             "summary": summary,
             "merged_facts": merged_facts,
             "findings": findings,
-            "raw_documents": evidence_details,  # ← actual OCR/extracted document content
+            "raw_documents": evidence_details,
             "created_at": str(c.get("created_at")),
         })
 

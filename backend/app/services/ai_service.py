@@ -67,17 +67,20 @@ def get_groq_client():
 
 
 # Groq model — llama-3.3-70b-versatile gives best quality on free tier (14,400 req/day)
-GROQ_MODEL = "llama-3.3-70b-versatile"
-# Primary Gemini model for text (used when Groq is not configured or fails)
-# gemini-1.5-flash and gemini-1.5-pro were deprecated in March 2025 — do NOT use them
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+]
 GEMINI_TEXT_MODEL = "gemini-2.0-flash"
 
 
 def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
     """
-    Synchronous Groq chat completion call.
-    Tries response_format={"type": "json_object"} first, and if Groq API rejects it,
-    falls back immediately to standard prompt completion.
+    Synchronous Groq chat completion call with automatic model fallback across:
+    llama-3.3-70b-versatile -> llama-3.1-8b-instant -> mixtral-8x7b-32768 -> gemma2-9b-it.
+    Prevents 429 token quota limits on any single model from causing downtime.
     """
     client = get_groq_client()
     if client is None:
@@ -87,24 +90,36 @@ def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
     if "json" not in prompt_content.lower():
         prompt_content = prompt_content + "\n\nRespond strictly in valid JSON format."
 
-    try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt_content}],
-            temperature=temperature,
-            response_format={"type": "json_object"},
-            max_tokens=4096,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        logger.warning(f"Groq call with json_object failed ({e}) — retrying without json_object constraint...")
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt_content}],
-            temperature=temperature,
-            max_tokens=4096,
-        )
-        return response.choices[0].message.content
+    last_err = None
+    for model_name in GROQ_MODELS:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt_content}],
+                temperature=temperature,
+                response_format={"type": "json_object"},
+                max_tokens=4096,
+            )
+            if response and response.choices[0].message.content:
+                logger.info(f"Groq text success via {model_name}")
+                return response.choices[0].message.content
+        except Exception as e:
+            logger.warning(f"Groq {model_name} (json_object) failed: {e}. Trying plain text mode...")
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt_content}],
+                    temperature=temperature,
+                    max_tokens=4096,
+                )
+                if response and response.choices[0].message.content:
+                    logger.info(f"Groq text success via {model_name} (plain mode)")
+                    return response.choices[0].message.content
+            except Exception as inner_e:
+                logger.warning(f"Groq {model_name} (plain mode) failed: {inner_e}")
+                last_err = inner_e
+
+    raise last_err or RuntimeError("All Groq models failed")
 
 
 def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
