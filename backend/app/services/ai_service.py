@@ -76,26 +76,35 @@ GEMINI_TEXT_MODEL = "gemini-2.0-flash"
 def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
     """
     Synchronous Groq chat completion call.
-    Returns the response text string.
-    Raises on failure.
+    Tries response_format={"type": "json_object"} first, and if Groq API rejects it,
+    falls back immediately to standard prompt completion.
     """
     client = get_groq_client()
     if client is None:
         raise RuntimeError("Groq client not available")
 
-    # Groq API requires the word 'json' in prompt when response_format is json_object
     prompt_content = prompt
     if "json" not in prompt_content.lower():
         prompt_content = prompt_content + "\n\nRespond strictly in valid JSON format."
 
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt_content}],
-        temperature=temperature,
-        response_format={"type": "json_object"},
-        max_tokens=4096,
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt_content}],
+            temperature=temperature,
+            response_format={"type": "json_object"},
+            max_tokens=4096,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.warning(f"Groq call with json_object failed ({e}) — retrying without json_object constraint...")
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt_content}],
+            temperature=temperature,
+            max_tokens=4096,
+        )
+        return response.choices[0].message.content
 
 
 def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:

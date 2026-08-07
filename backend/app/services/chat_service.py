@@ -555,31 +555,19 @@ Return ONLY valid JSON:
                     return {
                         "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
                         "cited_cases": [],
-                        "suggested_next_questions": [
-                            "What are the main risk factors in my document?",
-                            "Explain key medical / technical terms simply",
-                            "What step-by-step precautions should I take?"
-                        ],
+                        "suggested_next_questions": default_next_questions,
                     }
             else:
                 logger.error(f"Error during RAG chat response generation: {exc}")
                 return {
                     "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
                     "cited_cases": [],
-                    "suggested_next_questions": [
-                        "What are the main risk factors in my document?",
-                        "Explain key medical / technical terms simply",
-                        "What step-by-step precautions should I take?"
-                    ],
+                    "suggested_next_questions": default_next_questions,
                 }
 
     logger.error(f"Unexpected exit from retry loop: {last_exc}")
     return {
         "answer": _build_grounded_fallback_answer(user_message, user_cases, threat_intel_report),
         "cited_cases": [],
-        "suggested_next_questions": [
-            "What are the main risk factors in my document?",
-            "Explain key medical / technical terms simply",
-            "What step-by-step precautions should I take?"
-        ],
+        "suggested_next_questions": default_next_questions,
     }
