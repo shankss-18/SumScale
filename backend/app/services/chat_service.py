@@ -58,18 +58,37 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
         ]
         severity = (findings.get("severity") or "high").lower()
 
-        if any(k in msg_lower for k in ["invoice", "real", "fake", "bank", "email", "sms", "wrong", "mean", "explain", "tell me", "what is"]):
-            ans_parts = [f"Looking at your uploaded security documents, this case is flagged under **{pattern}** with a risk rating of **{severity.upper()}** (Score: {score}/100)."]
-            if citations:
-                ans_parts.append(f"Key red flags: {citations[0]}.")
-            ans_parts.append("To tell a real invoice or email from a fake: check the exact sender email domain (e.g., @sbi-verify-online.com vs official sbi.co.in), watch for fake urgency demands ('pay within 24 hours'), and verify bank/UPI payment details directly via the company's verified website.")
-            return " ".join(ans_parts)
+        # Specific Q: Link / click / URL / verification
+        if any(k in msg_lower for k in ["link", "click", "url", "site", "website", "http", "domain", "verification"]):
+            return (
+                f"**Do NOT click that link.** In your uploaded security records, suspicious links (like unverified shortlinks or fake login domains) were flagged under **{pattern}** (Risk Score: {score}/100).\n\n"
+                "Attackers use fake links to steal login credentials or install malware. Always navigate to official bank/company websites manually by typing the web address directly into your browser."
+            )
 
+        # Specific Q: Bank / email / sender / SBI / Jio
+        if any(k in msg_lower for k in ["bank", "email", "sender", "from", "account", "sbi", "jio", "official"]):
+            return (
+                f"Based on your security analysis, this message claims to be from a bank or official service provider, but shows clear indicators of **{pattern}** (Risk Score: {score}/100).\n\n"
+                "Key indicator: official banks will **never** request debit card PINs, netbanking passwords, or immediate account verification through unverified email links or high-urgency suspension threats. Contact your bank via their official phone number on your card."
+            )
+
+        # Specific Q: Invoice / payment / money / fee / charge / UPI
+        if any(k in msg_lower for k in ["invoice", "pay", "payment", "money", "fee", "upi", "charge", "amount", "transfer"]):
+            return (
+                f"Looking at the invoice details in your security audit, this document has been flagged as a **{pattern}** with an elevated risk rating of **{severity.upper()}** ({score}/100).\n\n"
+                "Unsolicited invoice demands requiring rapid payment via personal UPI handles or wire transfers are classic fake invoice scams. Do not transfer funds until you confirm the shipment directly with official support."
+            )
+
+        # Specific Q: What to do / precautions / steps / action
         if any(k in msg_lower for k in ["do", "step", "action", "precaution", "now", "next", "how", "should i"]):
             steps_str = "\n".join([f"- {s}" for s in remediation[:4]])
-            return f"Here are the recommended security actions for this **{pattern}** case:\n\n{steps_str}\n\nNever share OTPs, passwords, or netbanking credentials with unverified contacts."
+            return f"Here are the recommended security actions for your **{pattern}** case:\n\n{steps_str}\n\nKeep all original emails and SMS messages saved for cybercrime reporting."
 
-        return f"Your case is classified as **{pattern}** with a **{severity}** risk level. Key recommendation: verify all sender domains and payment requests through official verified channels before taking any action or transferring money."
+        # Dynamic fallback matching exact user question
+        return (
+            f"Regarding your question *\"{user_message.strip()}\"*: your security case is classified as **{pattern}** (Severity: **{severity.upper()}**).\n\n"
+            "We strongly advise against sharing sensitive personal details, opening links, or transferring funds based on this communication. Verify all details through official channels."
+        )
 
     # --- HEALTH DEPARTMENT FALLBACK ---
     # Pull real extracted data first — fall back to findings fields only if missing

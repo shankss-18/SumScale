@@ -175,24 +175,35 @@ def clean_json_response(raw_text: str) -> Dict[str, Any]:
     if not raw_text:
         raise ValueError("Empty response from AI engine")
     cleaned = raw_text.strip()
-    if cleaned.startswith("```"):
-        lines = cleaned.splitlines()
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].startswith("```"):
-            lines = lines[:-1]
-        cleaned = "\n".join(lines).strip()
+
+    # Extract JSON block inside code fences if present
+    if "```" in cleaned:
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(1).strip()
+        else:
+            lines = [line for line in cleaned.splitlines() if not line.strip().startswith("```")]
+            cleaned = "\n".join(lines).strip()
+
     try:
         return json.loads(cleaned)
     except Exception:
-        # Preserve LLM text output even if JSON parsing fails
+        # Try finding JSON object braces
+        json_match = re.search(r"(\{[\s\S]*\})", cleaned)
+        if json_match:
+            try:
+                return json.loads(json_match.group(1).strip())
+            except Exception:
+                pass
+
+        # Preserve LLM text output if JSON parsing fails
         return {
             "answer": cleaned,
             "cited_cases": [],
             "suggested_next_questions": [
-                "What step-by-step precautions should I take?",
-                "What are the main risk factors in my document?",
-                "Explain key medical / technical terms simply"
+                "How can I tell if this document or email is authentic?",
+                "What specific red flags make this suspicious?",
+                "What step-by-step security precautions should I take?"
             ]
         }
 
