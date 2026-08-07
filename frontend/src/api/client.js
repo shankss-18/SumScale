@@ -11,6 +11,16 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
+// Dedicated client for LLM chat calls — needs longer timeout since
+// Groq/Gemini can take 30-60s on cold starts or large context
+export const chatApiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 90000,
+});
+
 // In-memory token storage with localStorage backup for reload persistence
 let inMemoryAccessToken = localStorage.getItem('access_token');
 let onUnauthorizedCallback = null;
@@ -41,8 +51,32 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Same auth interceptors for the chat client
+chatApiClient.interceptors.request.use(
+  (config) => {
+    if (inMemoryAccessToken) {
+      config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response Interceptor: Catch 401 Unauthorized and redirect to login
 apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      setAccessToken(null);
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+chatApiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
@@ -117,7 +151,7 @@ export const getFileDownloadUrl = (caseId, fileId) => {
 
 // --- Chat & Reminders ---
 export const apiChat = (message, language = 'en', chatHistory = [], caseId = null) =>
-  apiClient.post('/chat', { message, language, chat_history: chatHistory, case_id: caseId });
+  chatApiClient.post('/chat', { message, language, chat_history: chatHistory, case_id: caseId });
 
 export const apiListReminders = (statusFilter = null) => {
   const params = statusFilter ? { status: statusFilter } : {};

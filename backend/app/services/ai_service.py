@@ -66,10 +66,11 @@ def get_groq_client():
     return _groq_client
 
 
-# Groq model to use — llama-3.3-70b-versatile has best quality on free tier
+# Groq model — llama-3.3-70b-versatile gives best quality on free tier (14,400 req/day)
 GROQ_MODEL = "llama-3.3-70b-versatile"
-# Fallback Gemini model for text (when Groq is not configured)
-GEMINI_TEXT_MODEL = "gemini-1.5-flash"
+# Primary Gemini model for text (used when Groq is not configured or fails)
+# gemini-1.5-flash and gemini-1.5-pro were deprecated in March 2025 — do NOT use them
+GEMINI_TEXT_MODEL = "gemini-2.0-flash"
 
 
 def _call_groq_text(prompt: str, temperature: float = 0.3) -> str:
@@ -101,9 +102,15 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
     """
     Synchronous Gemini text generation call with automatic model fallback.
     Tries JSON mime_type first, then falls back to plain text mode.
+    Only uses models that are currently active (post-March 2025 deprecation).
     """
     client = get_genai_client()
-    models_to_try = [GEMINI_TEXT_MODEL, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    # gemini-1.5-* were deprecated March 2025 — use 2.0+ only
+    models_to_try = [
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash-lite",
+    ]
     last_err = None
 
     # Pass 1: Try with JSON response_mime_type
@@ -115,12 +122,14 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=temperature,
+                    max_output_tokens=8192,
                 ),
             )
             if response and response.text:
+                logger.info(f"Gemini text success via {model_name} (JSON mode)")
                 return response.text
         except Exception as e:
-            logger.warning(f"Gemini model {model_name} (JSON mode) failed: {e}")
+            logger.warning(f"Gemini {model_name} (JSON mode) failed: {type(e).__name__}: {e}")
             last_err = e
 
     # Pass 2: Try without JSON response_mime_type (plain text mode)
@@ -131,12 +140,14 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=temperature,
+                    max_output_tokens=8192,
                 ),
             )
             if response and response.text:
+                logger.info(f"Gemini text success via {model_name} (plain mode)")
                 return response.text
         except Exception as e:
-            logger.warning(f"Gemini model {model_name} (plain text mode) failed: {e}")
+            logger.warning(f"Gemini {model_name} (plain mode) failed: {type(e).__name__}: {e}")
             last_err = e
 
     raise last_err or RuntimeError("All Gemini text models failed")

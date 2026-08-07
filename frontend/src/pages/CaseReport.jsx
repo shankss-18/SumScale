@@ -389,7 +389,16 @@ const CaseReport = () => {
 
       // 3. Query RAG Chatbot with user's selected language and full conversation history
       const lang = i18n.language ? i18n.language.split('-')[0] : (caseData?.language || 'en');
-      const res = await apiChat(userPrompt, lang, updatedMsgs, caseId);
+
+      // Send clean chat history — strip blobs/attachments to keep payload lean
+      // Keep last 16 messages (8 turns) for full multi-turn memory like Claude/GPT
+      const cleanHistory = updatedMsgs.slice(-16).map((m) => ({
+        sender: m.sender,
+        text: (m.text || '').slice(0, 800), // cap per message to avoid token overflow
+        timestamp: m.timestamp,
+      }));
+
+      const res = await apiChat(userPrompt, lang, cleanHistory, caseId);
       let aiResponseText = res.data?.answer;
       const returnedNextQuestions = res.data?.suggested_next_questions;
       const autoTitle = res.data?.auto_generated_title;
@@ -424,7 +433,7 @@ const CaseReport = () => {
         }
       }
 
-      // Ensure responses feel warm, empathetic, and human
+      // Only override if answer is genuinely empty or is the old voice-note placeholder
       if (!aiResponseText || aiResponseText.includes('cannot analyze your voice query directly')) {
         const findings = caseData?.findings || {};
         const summary = findings.summary || findings.pattern_classification || 'your recent health notes';
@@ -448,18 +457,26 @@ const CaseReport = () => {
       updateMessages([...updatedMsgs, aiMsg]);
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || '';
+      const isTimeout = errMsg.includes('timeout') || errMsg.includes('ECONNABORTED') || err?.code === 'ECONNABORTED';
       const isRateLimit = errMsg.includes('429') || errMsg.includes('rate') || errMsg.includes('quota');
-      const findings = caseData?.findings || {};
-      const fallbackText = isRateLimit
-        ? `I'm receiving a lot of requests right now and hit a brief rate limit. Please wait about 30 seconds and try again — I'll be ready to help!`
-        : `I've reviewed your records. ${findings.summary || 'Please keep monitoring your symptoms.'} ${findings.remediation_checklist?.[0] ? `My main suggestion: ${findings.remediation_checklist[0]}` : 'Feel free to ask me any further questions!'}`;
 
-      const fallbackAiMsg = {
+      let errorText;
+      if (isTimeout) {
+        errorText = `⏱️ The request is taking longer than expected — this usually happens on Render's free tier when the server is waking up. Please try sending your message again.`;
+      } else if (isRateLimit) {
+        errorText = `⚡ Briefly rate-limited. Please wait 30 seconds and try again — the AI will be ready!`;
+      } else {
+        errorText = `❌ Something went wrong connecting to the AI. Check your internet connection and try again.`;
+      }
+
+      const errorAiMsg = {
         sender: 'ai',
-        text: fallbackText,
+        text: errorText,
+        isError: true,
+        retryMessage: userPrompt, // stored so user can click retry
         timestamp: new Date().toISOString(),
       };
-      updateMessages([...messages, fallbackAiMsg]);
+      updateMessages([...messages, errorAiMsg]);
     } finally {
       setSending(false);
     }
