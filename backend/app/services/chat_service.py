@@ -41,176 +41,39 @@ def _build_grounded_fallback_answer(user_message: str, user_cases: List[Dict[str
     latest_case = user_cases[0] if user_cases else {}
     findings = latest_case.get("findings", {})
     merged_facts = latest_case.get("merged_facts", {})
-    dept = (latest_case.get("department") or "document").lower()
-
+    dept = (latest_case.get("department") or "general").lower()
     msg_lower = user_message.lower()
 
-    # --- FRAUD / SECURITY DEPARTMENT FALLBACK ---
-    fraud_kws = ["fraud", "scam", "bank", "otp", "phishing", "sms", "link", "invoice", "payment", "lotto", "upi", "paytm", "suspension"]
-    if dept == "fraud" or any(k in msg_lower for k in fraud_kws):
-        pattern = findings.get("pattern_classification") or "Suspicious Communication / Fraud Risk"
-        score = findings.get("risk_score") or 75
-        citations = findings.get("evidence_citations") or []
-        remediation = findings.get("remediation_checklist") or [
-            "Do not click any links or download attachments.",
-            "Verify the sender's identity through official channels directly.",
-            "Report the suspicious message to the CyberCrime Helpline (1930) or cybercrime.gov.in."
-        ]
-        severity = (findings.get("severity") or "high").lower()
+    # 1. Mine raw extracted document text for direct keyword matches
+    doc_text_snippets = []
+    for c in user_cases:
+        for ev in c.get("evidence", []):
+            txt = (ev.get("extracted_text") or "").strip()
+            if txt and len(txt) > 20 and "content extraction failed" not in txt.lower():
+                doc_text_snippets.append(txt)
 
-        # Specific Q: Link / click / URL / verification
-        if any(k in msg_lower for k in ["link", "click", "url", "site", "website", "http", "domain", "verification"]):
-            return (
-                f"**Do NOT click that link.** In your uploaded security records, suspicious links (like unverified shortlinks or fake login domains) were flagged under **{pattern}** (Risk Score: {score}/100).\n\n"
-                "Attackers use fake links to steal login credentials or install malware. Always navigate to official bank/company websites manually by typing the web address directly into your browser."
-            )
+    full_doc_text = "\n".join(doc_text_snippets)
+    msg_keywords = [w for w in msg_lower.split() if len(w) > 3 and w not in ["what", "how", "why", "when", "where", "should", "this", "that", "from", "with"]]
 
-        # Specific Q: Bank / email / sender / SBI / Jio
-        if any(k in msg_lower for k in ["bank", "email", "sender", "from", "account", "sbi", "jio", "official"]):
-            return (
-                f"Based on your security analysis, this message claims to be from a bank or official service provider, but shows clear indicators of **{pattern}** (Risk Score: {score}/100).\n\n"
-                "Key indicator: official banks will **never** request debit card PINs, netbanking passwords, or immediate account verification through unverified email links or high-urgency suspension threats. Contact your bank via their official phone number on your card."
-            )
+    matching_lines = []
+    if msg_keywords:
+        for line in full_doc_text.splitlines():
+            line_clean = line.strip()
+            if len(line_clean) > 15 and any(kw in line_clean.lower() for kw in msg_keywords):
+                matching_lines.append(line_clean)
 
-        # Specific Q: Invoice / payment / money / fee / charge / UPI
-        if any(k in msg_lower for k in ["invoice", "pay", "payment", "money", "fee", "upi", "charge", "amount", "transfer"]):
-            return (
-                f"Looking at the invoice details in your security audit, this document has been flagged as a **{pattern}** with an elevated risk rating of **{severity.upper()}** ({score}/100).\n\n"
-                "Unsolicited invoice demands requiring rapid payment via personal UPI handles or wire transfers are classic fake invoice scams. Do not transfer funds until you confirm the shipment directly with official support."
-            )
-
-        # Specific Q: What to do / precautions / steps / action
-        if any(k in msg_lower for k in ["do", "step", "action", "precaution", "now", "next", "how", "should i"]):
-            steps_str = "\n".join([f"- {s}" for s in remediation[:4]])
-            return f"Here are the recommended security actions for your **{pattern}** case:\n\n{steps_str}\n\nKeep all original emails and SMS messages saved for cybercrime reporting."
-
-        # Dynamic fallback matching exact user question
+    if matching_lines:
+        quoted_evidence = "\n".join([f"• {line[:250]}" for line in matching_lines[:3]])
         return (
-            f"Regarding your question *\"{user_message.strip()}\"*: your security case is classified as **{pattern}** (Severity: **{severity.upper()}**).\n\n"
-            "We strongly advise against sharing sensitive personal details, opening links, or transferring funds based on this communication. Verify all details through official channels."
+            f"Here are the specific details extracted from your documents:\n\n{quoted_evidence}\n\n"
+            "Let me know if you would like a deeper breakdown or specific calculations based on these details!"
         )
 
-    # --- HEALTH DEPARTMENT FALLBACK ---
-    # Pull real extracted data first — fall back to findings fields only if missing
-    symptoms = merged_facts.get("symptoms") or []
-    medications = merged_facts.get("medications_mentioned") or []
-    conditions = merged_facts.get("existing_conditions_mentioned") or []
-    report_summary = merged_facts.get("report_summary") or ""
-    body_part = merged_facts.get("body_part") or ""
-    duration = merged_facts.get("duration") or ""
-    visual_findings = merged_facts.get("visual_findings") or ""
-
-    # Pull findings-level fields (these are now contextual if ai_service fallback ran)
-    summary = findings.get("summary") or findings.get("pattern_classification") or report_summary or ""
+    # 2. Universal Department/Concept Fallback
+    summary = findings.get("summary") or findings.get("pattern_classification") or merged_facts.get("report_summary") or "Document Analysis"
     checklist = findings.get("remediation_checklist") or findings.get("otc_suggestions") or []
-    likely_assoc = findings.get("likely_associations") or conditions or symptoms[:3] or []
-    escalation_reason = findings.get("escalation_reason") or ""
     severity = (findings.get("severity") or findings.get("escalation_flag") or "medium").lower()
 
-    # Also collect raw evidence text snippets for richer fallback answers
-    evidence_snippets = []
-    for ev in latest_case.get("evidence", []):
-        txt = (ev.get("extracted_text") or "").strip()
-        if txt and len(txt) > 30:
-            evidence_snippets.append(txt[:400])
-
-    msg_lower = user_message.lower()
-
-    # --- Answer based on what the user actually asked ---
-
-    # Q: numbers / values / what should I be worried about
-    if any(k in msg_lower for k in ["number", "value", "worried", "concern", "most", "which", "result", "level"]):
-        parts = []
-        if report_summary and report_summary.lower() not in ("none", ""):
-            parts.append(f"Your report shows: **{report_summary}**.")
-        if likely_assoc:
-            concern_list = ", ".join([f"**{a}**" for a in likely_assoc[:3]])
-            parts.append(f"The areas worth keeping an eye on: {concern_list}.")
-        if body_part and body_part.lower() not in ("unknown", ""):
-            parts.append(f"The findings relate to your **{body_part}**.")
-        parts.append(
-            f"Overall risk is rated **{severity}** — worth a follow-up with your doctor, "
-            "who can walk you through the exact numbers."
-        )
-        return " ".join(parts)
-
-    # Q: what's wrong / what does this mean / explain / simple terms
-    if any(k in msg_lower for k in ["wrong", "mean", "explain", "what is", "tell me", "understand", "simple", "what does", "summary"]):
-        parts = []
-        if summary and "assessment completed" not in summary.lower() and "uploaded health" not in summary.lower():
-            parts.append(f"In plain terms: **{summary}**.")
-        elif report_summary and report_summary.lower() not in ("none", ""):
-            parts.append(f"Your report indicates: **{report_summary}**.")
-        if symptoms:
-            parts.append(f"Reported symptoms include: {', '.join(symptoms[:4])}.")
-        if conditions:
-            parts.append(f"Pre-existing conditions noted: {', '.join(conditions[:3])}.")
-        if medications:
-            parts.append(f"Medications mentioned: {', '.join(medications[:3])}.")
-        if not parts:
-            parts.append(f"Your {dept} documents were reviewed and a **{severity}** risk level was identified.")
-        parts.append("For a full interpretation, bring these documents to your doctor.")
-        return " ".join(parts)
-
-    # Q: what should I do / next steps / treat / precautions
-    if any(k in msg_lower for k in ["do", "step", "action", "precaution", "treat", "now", "next", "how", "should i", "happen if"]):
-        if checklist:
-            steps = "\n".join([f"- {item}" for item in checklist[:4]])
-            intro = f"Based on your {dept} records"
-            if medications:
-                intro += f" (medications noted: {', '.join(medications[:2])})"
-            return (
-                f"{intro}, here's what makes sense right now:\n\n{steps}\n\n"
-                "Hold onto all your original documents — they'll be essential for any specialist consultation."
-            )
-        # Build contextual suggestions from symptoms / conditions
-        suggestions = []
-        if medications:
-            suggestions.append(f"Continue taking your prescribed medication ({', '.join(medications[:2])}) as directed")
-        if duration and duration.lower() not in ("unknown", ""):
-            suggestions.append(f"Since symptoms have lasted {duration}, a follow-up appointment is strongly recommended")
-        suggestions.append("Keep a daily symptom log to share with your doctor")
-        suggestions.append("Avoid self-diagnosing or stopping any prescribed treatment without medical advice")
-        steps = "\n".join([f"- {s}" for s in suggestions])
-        return (
-            f"Given the **{severity}** risk profile in your {dept} records:\n\n{steps}\n\n"
-            "Would you like me to set up a reminder for your next appointment?"
-        )
-
-    # Q: risk / serious / dangerous / bad / what happens if
-    if any(k in msg_lower for k in ["risk", "serious", "danger", "bad", "safe", "okay", "fine", "happen"]):
-        sev_words = {"low": "relatively mild", "medium": "moderate", "high": "elevated"}
-        sev_desc = sev_words.get(severity, "moderate")
-        reason_part = ""
-        if escalation_reason and "consult" not in escalation_reason.lower():
-            reason_part = f" The main reason it's flagged: *{escalation_reason}*."
-        elif conditions:
-            reason_part = f" Pre-existing conditions ({', '.join(conditions[:2])}) make monitoring important."
-        return (
-            f"The risk on your case is currently **{sev_desc}**.{reason_part} "
-            "That's not a reason to panic, but it is a signal to get a proper check-up sooner rather than later. "
-            "Untreated findings can progress — catching them early gives you far more options."
-        )
-
-    # Generic conversational fallback — still document-aware
-    openers = [
-        f"Based on what's in your {dept} records,",
-        f"Looking at your uploaded {dept} documents,",
-        f"From your {dept} case,",
-        f"Going through your {dept} records,",
-    ]
-    opener = random.choice(openers)
-
-    body_parts = []
-    if summary and "assessment completed" not in summary.lower() and "uploaded health" not in summary.lower():
-        body_parts.append(f" the key finding is: **{summary}**")
-    elif report_summary and report_summary.lower() not in ("none", ""):
-        body_parts.append(f" the report notes: **{report_summary}**")
-    else:
-        body_parts.append(f" a **{severity}** risk level has been identified")
-
-    if likely_assoc:
-        body_parts.append(f", linked to {', '.join(likely_assoc[:2])}")
 
     followup_options = [
         " What specific part of your results would you like me to break down further?",
@@ -399,42 +262,74 @@ async def generate_grounded_chat_response(
     import time
     _seed = int(time.time()) % 10000
 
-    # Determine primary department & adapt Copilot persona
-    all_depts = [c.get("department") for c in user_cases if c.get("department")]
-    is_fraud_case = "fraud" in all_depts or any(
-        k in (user_message + " " + cases_context_json).lower()
-        for k in ["fraud", "scam", "bank", "otp", "phishing", "sms", "link", "invoice", "payment", "lotto", "upi", "paytm", "suspension"]
-    )
+    # Universal Dynamic Concept Classification from case department & text content
+    context_text_lower = (user_message + " " + cases_context_json).lower()
 
-    if is_fraud_case:
-        system_persona = (
-            "You are SumScale Copilot — a sharp, expert Cybersecurity, Phishing & Fraud Intelligence Specialist. "
-            "You speak like a protective security analyst who helps users identify scam emails, fake invoices, "
-            "phishing links, SMS fraud, and suspicious payment requests."
-        )
-        domain_mandate = (
-            "7. THIS CASE IS A FRAUD / SECURITY AUDIT. DO NOT USE MEDICAL OR HEALTH LANGUAGE. "
-            "DO NOT MENTION DOCTORS, SYMPTOMS, LAB RESULTS, OR CLINIC APPOINTMENTS. "
-            "Analyze the document strictly for scam indicators, fake invoice signs, phishing domain red flags, "
-            "unverified UPI IDs, urgency phrasing, and security precautions."
-        )
+    # 1. Fraud & Cybersecurity
+    if any(k in context_text_lower for k in ["fraud", "scam", "phishing", "fake invoice", "bank alert", "otp", "suspicious link", "upi", "sms scam", "urgent payment"]):
+        concept_type = "fraud"
+        system_persona = "You are SumScale Copilot — a sharp, expert Cybersecurity, Phishing & Fraud Intelligence Specialist. You speak like a protective security analyst who helps users identify scam emails, fake invoices, phishing links, SMS fraud, and suspicious payment requests."
+        domain_mandate = "Analyze the document strictly for scam indicators, fake invoice signs, phishing domain red flags, unverified UPI IDs, urgency phrasing, and security precautions. DO NOT use medical language."
         domain_reasoning = "Step 4: Add one sentence of security context if helpful ('Official banks will never ask for PINs or credentials via email...')."
         default_next_questions = [
             "How can I tell if this sender address is legitimate?",
             "What step-by-step precautions should I take against this scam?",
             "Where can I report this suspicious communication?"
         ]
-    else:
-        system_persona = (
-            "You are SumScale Copilot — a sharp, empathetic AI Health & Medical Assistant. "
-            "You speak like a brilliant, caring friend who happens to have medical and analytical expertise."
-        )
-        domain_mandate = "7. If the user asks about cholesterol → quote their actual cholesterol value. If they ask about their prescription → name the actual medication. If they ask about an appointment → give the actual date/doctor name."
+    # 2. Health & Medical
+    elif any(k in context_text_lower for k in ["blood", "symptom", "doctor", "hospital", "prescription", "clinic", "diagnosis", "health", "medical", "patient", "lab", "cholesterol", "report"]):
+        concept_type = "health"
+        system_persona = "You are SumScale Copilot — a sharp, empathetic AI Health & Medical Assistant. You speak like a brilliant, caring friend who happens to have medical and analytical expertise."
+        domain_mandate = "Quote actual lab values, symptoms, medications, reference ranges, or doctor notes from the user's health documents. Provide clear, empathetic medical context."
         domain_reasoning = "Step 4: Add one sentence of medical context if helpful ('High LDL is linked to...')."
         default_next_questions = [
             "What are the main risk factors in my document?",
             "Explain key medical terms simply",
             "What step-by-step precautions should I take?"
+        ]
+    # 3. Financial & Accounting
+    elif any(k in context_text_lower for k in ["tax", "balance sheet", "revenue", "expense", "bank statement", "accounting", "audit", "payroll", "financial", "salary", "profit"]):
+        concept_type = "financial"
+        system_persona = "You are SumScale Copilot — a sharp, analytical Financial & Accounting Specialist. You speak like an expert CPA and financial auditor."
+        domain_mandate = "Quote exact dollar/rupee amounts, transaction dates, vendor names, line items, and financial balances from the documents."
+        domain_reasoning = "Step 4: Add one sentence of financial context if helpful ('Comparing total revenue against operating expenses...')."
+        default_next_questions = [
+            "What are the largest expenses or line items in this document?",
+            "Are there any financial discrepancies or unusual figures?",
+            "Can you summarize the overall financial standing?"
+        ]
+    # 4. Legal & Contracts
+    elif any(k in context_text_lower for k in ["contract", "agreement", "clause", "legal", "nda", "tenant", "lease", "court", "liability", "party"]):
+        concept_type = "legal"
+        system_persona = "You are SumScale Copilot — a sharp, meticulous Legal & Contract Auditor. You speak like a senior legal counsel."
+        domain_mandate = "Quote exact clause numbers, legal obligations, party names, effective dates, liability caps, or termination conditions."
+        domain_reasoning = "Step 4: Add one sentence of legal context if helpful ('Standard indemnification clauses typically state...')."
+        default_next_questions = [
+            "What are my key obligations and deadlines under this agreement?",
+            "Are there any high-risk clauses or liability caps?",
+            "What are the termination conditions outlined here?"
+        ]
+    # 5. Technical & Engineering
+    elif any(k in context_text_lower for k in ["error", "exception", "traceback", "stack trace", "code", "api", "database", "python", "json", "config"]):
+        concept_type = "tech"
+        system_persona = "You are SumScale Copilot — a principal Systems Architect & Software Engineer. You diagnose software issues with surgical precision."
+        domain_mandate = "Quote exact error codes, function signatures, file paths, line numbers, or code blocks from the technical documents."
+        domain_reasoning = "Step 4: Add one sentence of architectural context if helpful ('Unhandled exceptions in async loops usually occur when...')."
+        default_next_questions = [
+            "What is the root cause of this technical error?",
+            "How can I fix this code or configuration issue?",
+            "What best practices should I follow to prevent this?"
+        ]
+    # 6. Universal / General
+    else:
+        concept_type = "general"
+        system_persona = "You are SumScale Copilot — a brilliant, multi-domain Universal Document Intelligence Assistant. You analyze any document type with high precision."
+        domain_mandate = "Quote exact facts, dates, names, key takeaways, and specific data points from the user's uploaded documents."
+        domain_reasoning = "Step 4: Add one sentence of helpful synthesis context."
+        default_next_questions = [
+            "What are the key takeaways from my document?",
+            "Can you summarize the main sections simply?",
+            "What action items or next steps are outlined?"
         ]
 
     # Build a compact document inventory summary for the prompt header
@@ -455,29 +350,34 @@ LANGUAGE: Write ALL output exclusively in **{lang_name}** ({language}). No Engli
 📄 DOCUMENTS UPLOADED BY USER:
 {doc_inventory}
 
-🚨 SPECIFICITY MANDATE (CRITICAL — VIOLATION = FAILURE):
+🚨 NON-REPETITION & DIRECT ANSWER MANDATE (CRITICAL — VIOLATION = FAILURE):
 This is turn #{_seed}. You MUST:
-1. READ the `raw_documents` section in the case data — it contains the ACTUAL text from the user's uploaded files.
-2. ANSWER DIRECTLY using specific values, names, dates, amounts, links, or addresses from those documents.
-3. NEVER give generic advice unless tied to a specific finding in their document.
-4. NEVER start with a section header like "Case Overview" or "Assessment".
-5. NEVER produce the same answer structure twice in a conversation — check <conversation_history> and vary your response.
-6. {domain_mandate}
+1. DO NOT start your response with template intro phrases like:
+   - "Regarding your question..."
+   - "Based on your security analysis..."
+   - "Looking at your uploaded documents..."
+   - "In plain terms..."
+   - "I took a close look at your records..."
+2. JUMP DIRECTLY into answering the user's specific question using exact facts, names, numbers, dates, links, or quotes from their document.
+3. READ the `raw_documents` section in the case data — it contains the ACTUAL text from the user's uploaded files.
+4. {domain_mandate}
+5. NEVER give generic advice unless tied to a specific finding in their document.
+6. Vary your sentence structure, vocabulary, and formatting across every response — check <conversation_history> to ensure your response is unique and non-repetitive.
 
 🧠 REASONING PROCESS (follow this before writing your answer):
 Step 1: Identify the exact question the user is asking.
 Step 2: Find the relevant data in `raw_documents` and `merged_facts`.
-Step 3: Answer THAT question using THOSE specifics.
+Step 3: Answer THAT question directly with THOSE specific facts.
 {domain_reasoning}
-Step 5: Offer ONE natural follow-up, not a menu of options.{threat_prompt_section}
+Step 5: Offer ONE natural follow-up question.{threat_prompt_section}
 
 TONE:
-- Warm, direct, like a knowledgeable friend — not a formal report.
-- Match tone to emotion: worried → reassuring with facts; curious → explanatory; urgent → clear and action-focused.
+- Direct, warm, analytical, and tailored to the concept ({concept_type.upper()}).
+- Match tone to emotion: worried → reassuring with facts; curious → explanatory; urgent → clear action-focused.
 - Use "you" and "your". Short paragraphs. No bullet-point walls unless listing steps.
 - NEVER use "SOURCES CITED" footer.
 
-CONVERSATION MEMORY: Check <conversation_history> — if they're following up, build on what was said before.
+CONVERSATION MEMORY: Check <conversation_history> — build naturally on what was discussed.
 
 <user_data>
 CASE DATA (includes raw document content in `raw_documents`):
@@ -494,7 +394,7 @@ USER'S CURRENT MESSAGE — answer THIS and ONLY THIS:
 
 Return ONLY valid JSON:
 {{
-    "answer": "Specific, warm, document-grounded answer that directly addresses what the user asked. Cites actual values/names/dates/amounts from their documents. In {lang_name}.",
+    "answer": "Direct, highly specific, document-grounded answer addressing ONLY what the user asked. Quotes actual facts/numbers/names/dates. In {lang_name}.",
     "cited_cases": [
         {{
             "case_id": "case_id_here",

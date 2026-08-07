@@ -177,21 +177,54 @@ def _call_gemini_text(prompt: str, temperature: float = 0.3) -> str:
     raise last_err or RuntimeError("All Gemini text models failed")
 
 
+def _call_free_public_llm(prompt: str, temperature: float = 0.3) -> str:
+    """
+    Tertiary LLM caller — uses public Pollinations AI free text endpoint via HTTP.
+    Guarantees live LLM responses even if Groq and Gemini API keys are completely out of quota.
+    """
+    import httpx
+    try:
+        url = "https://text.pollinations.ai/"
+        payload = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "model": "openai",
+            "seed": 42
+        }
+        with httpx.Client(timeout=25.0) as http_client:
+            res = http_client.post(url, json=payload)
+            if res.status_code == 200 and res.text and len(res.text.strip()) > 10:
+                logger.info("Public free LLM (Pollinations) call succeeded!")
+                return res.text.strip()
+    except Exception as exc:
+        logger.warning(f"Public free LLM call failed: {exc}")
+    raise RuntimeError("All LLM providers (Groq, Gemini, Public) failed")
+
+
 def call_text_llm(prompt: str, temperature: float = 0.3) -> str:
     """
-    Unified text LLM caller — uses Groq if configured, with automatic fallback to Gemini.
-    Returns raw response string.
+    Unified text LLM caller with 3-tier provider redundancy:
+    1. Groq multi-model fallback chain (llama-3.3-70b -> llama-3.1-8b -> mixtral -> gemma2)
+    2. Gemini multi-model fallback chain (gemini-2.0-flash -> gemini-2.5-flash -> flash-lite)
+    3. Public free LLM provider (Pollinations)
     """
     if _use_groq:
         try:
-            logger.debug(f"Routing to Groq ({GROQ_MODEL})")
             return _call_groq_text(prompt, temperature)
         except Exception as e:
-            logger.warning(f"Groq call failed ({e}), falling back to Gemini text model ({GEMINI_TEXT_MODEL})...")
-            return _call_gemini_text(prompt, temperature)
+            logger.warning(f"Groq models exhausted ({e}), trying Gemini text models...")
+            try:
+                return _call_gemini_text(prompt, temperature)
+            except Exception as g_err:
+                logger.warning(f"Gemini models exhausted ({g_err}), trying public free LLM...")
+                return _call_free_public_llm(prompt, temperature)
     else:
-        logger.debug(f"Routing to Gemini ({GEMINI_TEXT_MODEL})")
-        return _call_gemini_text(prompt, temperature)
+        try:
+            return _call_gemini_text(prompt, temperature)
+        except Exception as g_err:
+            logger.warning(f"Gemini models exhausted ({g_err}), trying public free LLM...")
+            return _call_free_public_llm(prompt, temperature)
 
 
 def clean_json_response(raw_text: str) -> Dict[str, Any]:
