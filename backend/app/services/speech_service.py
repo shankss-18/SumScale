@@ -52,13 +52,33 @@ Language Recognition Rule: The file or spoken audio may be in any Indian languag
 Return plain text summary/transcription ONLY.
 """
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=[file_part, prompt],
-            config=types.GenerateContentConfig(temperature=0.1),
-        )
+        # Try extraction with fallback models — gemini-1.5-* deprecated March 2025
+        _multimodal_models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite"]
+        extracted = None
+        last_err = None
 
-        extracted = response.text.strip() if response.text else "[No text detected]"
+        for model_name in _multimodal_models:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[file_part, prompt],
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=4096,
+                    ),
+                )
+                if response and response.text:
+                    extracted = response.text.strip()
+                    logger.info(f"Multimodal extraction success via {model_name} for {file_path.name}")
+                    break
+            except Exception as e:
+                logger.warning(f"Multimodal extraction failed with {model_name} for {file_path.name}: {type(e).__name__}: {e}")
+                last_err = e
+
+        if not extracted:
+            logger.error(f"All multimodal models failed for {file_path.name}: {last_err}")
+            return f"[Content extraction failed for {file_path.name}]"
+
         return extracted[:10000]
 
     except Exception as e:
